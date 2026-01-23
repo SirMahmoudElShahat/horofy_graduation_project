@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/app_router.dart';
+import 'package:horofy/core/style/app_colors.dart';
 
 void main() {
   runApp(Horofy(appRouter: AppRouter()));
@@ -15,6 +16,9 @@ class Horofy extends StatelessWidget {
     return MaterialApp(
       title: 'Horoofy حروفى',
       debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        primaryColor: AppColors.primary,
+      ),
       onGenerateRoute: appRouter.generateRoute,
     );
   }
