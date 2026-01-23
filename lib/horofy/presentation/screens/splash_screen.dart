@@ -1,5 +1,6 @@
 import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/font_style.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -43,17 +44,32 @@ class NextScreen extends StatelessWidget {
             Positioned(
               top: 370,
               left: 170,
-              child: Text('طفل', style: AppTextStyles.home),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, loginScreen);
+                },
+                child: Text('طفل', style: AppTextStyles.home),
+              ),
             ),
             Positioned(
               top: 420,
               left: 160,
-              child: Text('ولي الأمر', style: AppTextStyles.home),
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.pushNamed(context, loginScreen);
+                },
+                child: Text('ولي الأمر', style: AppTextStyles.home),
+              ),
             ),
             Positioned(
               top: 475,
               left: 180,
-              child: Text('زائر', style: AppTextStyles.home),
+              child: GestureDetector(
+                onTap: () {
+                  //on boarding screen
+                },
+                child: Text('زائر', style: AppTextStyles.home),
+              ),
             ),
           ],
         ),
