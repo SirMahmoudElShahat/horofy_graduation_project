@@ -1,9 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/app_router.dart';
+import 'package:horofy/core/cache/cache_helper.dart';
 import 'package:horofy/core/style/app_colors.dart';
+import 'package:horofy/horofy/data/datasources/local_data_source.dart';
+import 'package:horofy/horofy/data/repositories/onboarding_repository_impl.dart';
+import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 
-void main() {
-  runApp(Horofy(appRouter: AppRouter()));
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await CacheHelper.init();
+  runApp(
+    BlocProvider(
+      create: (context) =>
+          OnboardingCubit(OnboardingRepositoryImpl(LocalDataSourceImpl())),
+      child: Horofy(appRouter: AppRouter()),
+    ),
+  );
 }
 
 class Horofy extends StatelessWidget {
@@ -16,9 +29,7 @@ class Horofy extends StatelessWidget {
     return MaterialApp(
       title: 'Horoofy حروفى',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primaryColor: AppColors.primary,
-      ),
+      theme: ThemeData(primaryColor: AppColors.primary),
       onGenerateRoute: appRouter.generateRoute,
     );
   }
