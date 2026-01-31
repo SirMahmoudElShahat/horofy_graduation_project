@@ -3,6 +3,7 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/widgets/offline_wrapper.dart';
 import 'package:horofy/horofy/presentation/screens/chat_screen.dart';
 import 'package:horofy/horofy/presentation/screens/login_screen.dart';
+import 'package:horofy/horofy/presentation/screens/main_home.dart';
 import 'package:horofy/horofy/presentation/screens/onboarding_screen.dart';
 import 'package:horofy/horofy/presentation/screens/signup_screen.dart';
 import 'package:horofy/horofy/presentation/screens/splash_screen.dart';
@@ -39,6 +40,11 @@ class AppRouter {
       case chatScreen:
         return MaterialPageRoute(
           builder: (_) => OfflineWrapper(child: const ChatScreen()),
+        );
+
+      case mainHome:
+        return MaterialPageRoute(
+          builder: (_) => OfflineWrapper(child: const MainHome()),
         );
 
       default:
