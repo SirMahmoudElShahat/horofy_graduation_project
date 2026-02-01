@@ -1,4 +1,3 @@
-import 'package:animated_splash_screen/animated_splash_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
@@ -13,47 +12,36 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  late Future<bool> _isOnboardingSeen;
-
   @override
   void initState() {
     super.initState();
-    _isOnboardingSeen = Future.value(
-      context.read<OnboardingCubit>().isOnboardingSeen(),
+    _goNext();
+  }
+
+  void _goNext() async {
+    final isSeen = await context.read<OnboardingCubit>().isOnboardingSeen();
+
+    await Future.delayed(const Duration(seconds: 3));
+
+    if (!mounted) return;
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => isSeen ? const LoginScreen() : const OnboardingScreen(),
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _isOnboardingSeen,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          // While checking, show a loading or just the splash
-          return AnimatedSplashScreen(
-            splashIconSize: double.infinity,
-            duration: 4000,
-            splash: SizedBox.expand(
-              child: Image.asset('assets/images/splash.gif', fit: BoxFit.fill),
-            ),
-            nextScreen: Container(), // Placeholder
-          );
-        } else {
-          final isSeen = snapshot.data ?? false;
-          final nextScreen = isSeen
-              ? const LoginScreen()
-              : const OnboardingScreen();
-
-          return AnimatedSplashScreen(
-            splashIconSize: double.infinity,
-            duration: 4000,
-            splash: SizedBox.expand(
-              child: Image.asset('assets/images/splash.gif', fit: BoxFit.fill),
-            ),
-            nextScreen: nextScreen,
-          );
-        }
-      },
+    return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Colors.black
+          : Colors.white,
+      body: SizedBox.expand(
+        child: Image.asset('assets/images/splash.gif', fit: BoxFit.cover),
+      ),
     );
   }
 }

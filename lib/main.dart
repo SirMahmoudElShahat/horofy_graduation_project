@@ -27,6 +27,7 @@ class Horofy extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    precacheImage(const AssetImage('assets/images/splash.gif'), context);
     return MaterialApp(
       title: 'Horoofy حروفى',
       debugShowCheckedModeBanner: false,

@@ -5,14 +5,14 @@ import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/message_bubble.dart.dart';
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+class OnboardingChatScreen extends StatefulWidget {
+  const OnboardingChatScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<OnboardingChatScreen> createState() => _OnboardingChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _OnboardingChatScreenState extends State<OnboardingChatScreen> {
   final TextEditingController _controller = TextEditingController();
 
   final List<Map<String, dynamic>> _messages = [

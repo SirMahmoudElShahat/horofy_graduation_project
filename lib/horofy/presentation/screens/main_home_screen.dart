@@ -6,8 +6,8 @@ import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_state.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
-class MainHome extends StatelessWidget {
-  const MainHome({super.key});
+class MainHomeScreen extends StatelessWidget {
+  const MainHomeScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +38,9 @@ class MainHome extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  SizedBox(height: 100),
+                  SizedBox(height: 80),
                   Center(child: Image.asset('assets/images/login.jpg')),
-                  SizedBox(height: 30),
+                  SizedBox(height: 10),
                   Text(
                     'تسجيل الدخول كـ',
                     style: AppTextStyles.blackFont.copyWith(fontSize: 24),

@@ -128,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
               CustomButton(
                 text: 'ابدأ',
                 onPressed: () {
-                  Navigator.pushNamed(context, mainHome);
+                  Navigator.pushNamed(context, mainHomeScreen);
                 },
               ),
               SizedBox(height: 40),

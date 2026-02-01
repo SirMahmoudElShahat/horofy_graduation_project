@@ -22,7 +22,7 @@ class VisitorScreen extends StatelessWidget {
               CustomButton(
                 text: 'التحدث مع شلبى',
                 onPressed: () {
-                  Navigator.pushNamed(context, chatScreen);
+                  Navigator.pushNamed(context, onboardingChatScreen);
                 },
               ),
               SizedBox(height: 70),
