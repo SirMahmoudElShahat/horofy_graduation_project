@@ -14,6 +14,12 @@ class AppTextStyles {
     color: Colors.black,
   );
 
+  static const whiteFont = TextStyle(
+    fontFamily: 'Cairo',
+    fontWeight: FontWeight.w200,
+    color: Colors.white,
+  );
+
   static const greyFont = TextStyle(
     fontFamily: 'Cairo',
     fontSize: 15,

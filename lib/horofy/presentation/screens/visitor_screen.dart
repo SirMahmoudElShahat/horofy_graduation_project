@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
 class VisitorScreen extends StatelessWidget {
   const VisitorScreen({super.key});
@@ -18,35 +19,11 @@ class VisitorScreen extends StatelessWidget {
               SizedBox(height: 120),
               Center(child: Image.asset('assets/images/login.jpg')),
               SizedBox(height: 140),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 5,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    minimumSize: Size(double.infinity, 60),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                  ),
-                  onPressed: () {
-                    Navigator.pushReplacementNamed(context, chatScreen);
-                  },
-                  child: Text(
-                    'التحدث مع شلبى',
-                    style: AppTextStyles.home.copyWith(fontSize: 25),
-                  ),
-                ),
+              CustomButton(
+                text: 'التحدث مع شلبى',
+                onPressed: () {
+                  Navigator.pushNamed(context, onboardingChatScreen);
+                },
               ),
               SizedBox(height: 70),
               Padding(

@@ -1,19 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/message_bubble.dart.dart';
 
-class ChatScreen extends StatefulWidget {
-  const ChatScreen({super.key});
+class OnboardingChatScreen extends StatefulWidget {
+  const OnboardingChatScreen({super.key});
 
   @override
-  State<ChatScreen> createState() => _ChatScreenState();
+  State<OnboardingChatScreen> createState() => _OnboardingChatScreenState();
 }
 
-class _ChatScreenState extends State<ChatScreen> {
+class _OnboardingChatScreenState extends State<OnboardingChatScreen> {
   final TextEditingController _controller = TextEditingController();
 
   final List<Map<String, dynamic>> _messages = [
     {"text": "أهلاً! عامل إيه؟ 👋", "isMe": true},
     {"text": "تمام الحمد لله، وانت؟ 😊", "isMe": false},
+    {
+      "text": "لو حابب تبدأ، دوس على الزر اللي تحت 👇",
+      "isMe": false,
+      "hasButton": true,
+    },
   ];
 
   @override
@@ -42,6 +51,18 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 6),
+            child: TextButton(
+              onPressed: () async {
+                await context.read<OnboardingCubit>().completeOnboarding();
+                Navigator.pushNamed(context, loginScreen);
+              },
+              child: const Text("تخطى", style: AppTextStyles.greyFont),
+            ),
+          ),
+        ],
       ),
 
       body: Stack(
@@ -50,7 +71,6 @@ class _ChatScreenState extends State<ChatScreen> {
           Positioned.fill(
             child: Image.asset('assets/images/chat.jpg', fit: BoxFit.cover),
           ),
-
           // main content
           SafeArea(
             child: Column(
@@ -59,7 +79,6 @@ class _ChatScreenState extends State<ChatScreen> {
                 Expanded(
                   child: ListView.builder(
                     //reverse: true,
-                    
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 16,
@@ -70,11 +89,11 @@ class _ChatScreenState extends State<ChatScreen> {
                       return MessageBubble(
                         text: msg["text"],
                         isMe: msg["isMe"],
+                        hasButton: msg["hasButton"] ?? false,
                       );
                     },
                   ),
                 ),
-
                 // input bar
                 Container(
                   padding: const EdgeInsets.symmetric(

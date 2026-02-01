@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -124,35 +125,11 @@ class _LoginScreenState extends State<LoginScreen> {
                 ],
               ),
               SizedBox(height: 25),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 5,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    elevation: 0,
-                    backgroundColor: Theme.of(context).primaryColor,
-                    minimumSize: Size(double.infinity, 60),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(25),
-                    ),
-                  ),
-                  onPressed: () {
-                    // action here
-                  },
-                  child: Text(
-                    'ابدأ',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 32),
-                  ),
-                ),
+              CustomButton(
+                text: 'ابدأ',
+                onPressed: () {
+                  Navigator.pushNamed(context, mainHomeScreen);
+                },
               ),
               SizedBox(height: 40),
               Row(
