@@ -49,7 +49,7 @@ class MainHomeScreen extends StatelessWidget {
                   CustomButton(
                     text: 'ولى أمر',
                     onPressed: () {
-                      // Navigate to Parent Home Screen
+                      Navigator.pushNamed(context, parentHomeScreen);
                     },
                   ),
                   SizedBox(height: 20),
