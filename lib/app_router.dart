@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/widgets/offline_wrapper.dart';
+import 'package:horofy/horofy/presentation/screens/chat_screen.dart';
 import 'package:horofy/horofy/presentation/screens/onboarding_chat_screen.dart';
 import 'package:horofy/horofy/presentation/screens/login_screen.dart';
 import 'package:horofy/horofy/presentation/screens/main_home_screen.dart';
 import 'package:horofy/horofy/presentation/screens/onboarding_screen.dart';
+import 'package:horofy/horofy/presentation/screens/parent_home_screen.dart';
 import 'package:horofy/horofy/presentation/screens/signup_screen.dart';
 import 'package:horofy/horofy/presentation/screens/splash_screen.dart';
 import 'package:horofy/horofy/presentation/screens/visitor_screen.dart';
@@ -45,6 +47,16 @@ class AppRouter {
       case mainHomeScreen:
         return MaterialPageRoute(
           builder: (_) => OfflineWrapper(child: const MainHomeScreen()),
+        );
+
+      case parentHomeScreen:
+        return MaterialPageRoute(
+          builder: (_) => OfflineWrapper(child: const ParentHomeScreen()),
+        );
+      
+      case chatScreen:
+        return MaterialPageRoute(
+          builder: (_) => OfflineWrapper(child: const ChatScreen()),
         );
 
       default:
