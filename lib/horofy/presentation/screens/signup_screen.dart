@@ -57,7 +57,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIcon: SizedBox(width: 48),
+                    suffixIcon: SizedBox(width: 48),
                   ),
                 ),
               ),
@@ -87,8 +87,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIconConstraints: BoxConstraints(minWidth: 48),
-                    prefixIcon: IconButton(
+                    suffixIconConstraints: BoxConstraints(minWidth: 48),
+                    suffixIcon: IconButton(
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
@@ -124,8 +124,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIconConstraints: BoxConstraints(minWidth: 48),
-                    prefixIcon: IconButton(
+                    suffixIconConstraints: BoxConstraints(minWidth: 48),
+                    suffixIcon: IconButton(
                       onPressed: () => setState(
                         () => _confirmationObscure = !_confirmationObscure,
                       ),
@@ -141,12 +141,8 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               SizedBox(height: 25),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(
-                    '.أنا أوافق علي كل الشروط والصلاحيات',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
-                  ),
                   Checkbox(
                     value: _agree,
                     onChanged: (value) {
@@ -154,6 +150,11 @@ class _SignupScreenState extends State<SignupScreen> {
                         _agree = value ?? false;
                       });
                     },
+                  ),
+
+                  Text(
+                    'أنا أوافق علي كل الشروط والصلاحيات.',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
                   ),
                 ],
               ),
@@ -164,6 +165,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 spacing: 6,
                 children: [
+                  Text(
+                    'هل لديك حساب بالفعل؟',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
+                  ),
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
@@ -175,10 +180,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
-                  ),
-                  Text(
-                    'هل لديك حساب بالفعل؟',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
                   ),
                 ],
               ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:horofy/app_router.dart';
 import 'package:horofy/core/cache/cache_helper.dart';
 import 'package:horofy/core/constants/strings.dart';
@@ -34,6 +35,12 @@ class Horofy extends StatelessWidget {
       theme: ThemeData(primaryColor: AppColors.primary),
       initialRoute: splashScreen,
       onGenerateRoute: appRouter.generateRoute,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en'), Locale('ar')],
     );
   }
 }

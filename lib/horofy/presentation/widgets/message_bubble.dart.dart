@@ -25,8 +25,8 @@ class MessageBubble extends StatelessWidget {
       alignment: alignment,
       child: Column(
         crossAxisAlignment: isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
         children: [
           Container(
             constraints: BoxConstraints(
@@ -49,7 +49,7 @@ class MessageBubble extends StatelessWidget {
 
           if (hasButton)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: 3),
               child: ElevatedButton(
                 onPressed: () async {
                   await context.read<OnboardingCubit>().completeOnboarding();

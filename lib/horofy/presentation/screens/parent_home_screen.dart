@@ -34,26 +34,6 @@ class ParentHomeScreen extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFBF8FFE),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                  ),
-                  child: const Text(
-                    'إلغاء',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
                     _logout(context);
                   },
                   style: ElevatedButton.styleFrom(
@@ -69,6 +49,26 @@ class ParentHomeScreen extends StatelessWidget {
                   ),
                   child: const Text(
                     'تأكيد',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFBF8FFE),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: const Text(
+                    'إلغاء',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -117,7 +117,7 @@ class ParentHomeScreen extends StatelessWidget {
             CustomButton(
               text: 'قائمة الأطفال',
               onPressed: () {
-                // Navigate to Child Home Screen
+                Navigator.pushNamed(context, childsListScreen);
               },
               buttonColor: const Color(0xFFE8F5EC),
             ),
@@ -125,7 +125,7 @@ class ParentHomeScreen extends StatelessWidget {
             CustomButton(
               text: 'ٳضافة طفل',
               onPressed: () {
-                // Navigate to Child Home Screen
+                Navigator.pushNamed(context, childInformationScreen);
               },
               buttonColor: const Color(0xFFFFE5CC),
             ),
