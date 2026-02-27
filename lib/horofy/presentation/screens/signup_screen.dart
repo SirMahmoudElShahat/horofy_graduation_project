@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
@@ -17,7 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: SingleChildScrollView(
@@ -25,7 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 100),
-              Center(child: Image.asset('assets/images/login.jpg')),
+              Center(child: Image.asset('assets/images/login.png')),
               SizedBox(height: 40),
               Text(
                 'ﺇنشاء حساب',
@@ -35,7 +36,7 @@ class _SignupScreenState extends State<SignupScreen> {
               // Email field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -65,7 +66,7 @@ class _SignupScreenState extends State<SignupScreen> {
               // Password field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -102,7 +103,7 @@ class _SignupScreenState extends State<SignupScreen> {
               // Confirmation Password field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(

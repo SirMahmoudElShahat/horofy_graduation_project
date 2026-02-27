@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
@@ -17,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: SingleChildScrollView(
@@ -25,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 100),
-              Center(child: Image.asset('assets/images/login.jpg')),
+              Center(child: Image.asset('assets/images/login.png')),
               SizedBox(height: 40),
               Text(
                 'تسجيل الدخول',
@@ -35,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Email field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -65,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Password field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -108,6 +109,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   Row(
                     children: [
+                      Text(
+                        'تذكرني',
+                        style: AppTextStyles.blackFont.copyWith(fontSize: 14),
+                      ),
                       Checkbox(
                         value: _remember,
                         onChanged: (value) {
@@ -115,10 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             _remember = value ?? false;
                           });
                         },
-                      ),
-                      Text(
-                        'تذكرني',
-                        style: AppTextStyles.blackFont.copyWith(fontSize: 14),
                       ),
                     ],
                   ),

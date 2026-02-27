@@ -44,7 +44,7 @@ class MessageBubble extends StatelessWidget {
               ),
               border: isMe ? Border.all(color: Colors.grey, width: 2) : null,
             ),
-            child: Text(text, style: AppTextStyles.blackFont),
+            child: Text(text, style: isMe ? AppTextStyles.blackFont : AppTextStyles.whiteFont),
           ),
 
           if (hasButton)

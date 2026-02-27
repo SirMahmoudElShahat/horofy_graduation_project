@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
@@ -28,7 +29,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: SingleChildScrollView(
@@ -36,7 +37,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               const SizedBox(height: 80),
-              Center(child: Image.asset('assets/images/login.jpg')),
+              Center(child: Image.asset('assets/images/login.png')),
               const SizedBox(height: 80),
               Text(
                 'ٳضافة طفل جديد',
@@ -55,7 +56,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
               Container(
                 margin: const EdgeInsets.only(top: 10, bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -92,7 +93,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
               Container(
                 margin: const EdgeInsets.only(top: 10, bottom: 20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: const [
                     BoxShadow(
@@ -171,7 +172,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppColors.background,
                         overlayColor: Colors.transparent,
                         minimumSize: const Size(150, 60),
                         shape: RoundedRectangleBorder(
@@ -193,7 +194,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
                           ),
                           const SizedBox(width: 20),
                           Image.asset(
-                            'assets/images/child/boy.jpg',
+                            'assets/images/child/boy.png',
                             fit: BoxFit.cover,
                             width: 40,
                             height: 40,
@@ -220,7 +221,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
                     child: ElevatedButton(
                       style: ElevatedButton.styleFrom(
                         elevation: 0,
-                        backgroundColor: Colors.white,
+                        backgroundColor: AppColors.background,
                         overlayColor: Colors.transparent,
                         minimumSize: const Size(150, 60),
                         shape: RoundedRectangleBorder(
@@ -242,7 +243,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
                           ),
                           const SizedBox(width: 20),
                           Image.asset(
-                            'assets/images/child/girl.jpg',
+                            'assets/images/child/girl.png',
                             fit: BoxFit.contain,
                             width: 40,
                             height: 40,
