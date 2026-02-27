@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
@@ -17,7 +18,7 @@ class _SignupScreenState extends State<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: SingleChildScrollView(
@@ -25,7 +26,7 @@ class _SignupScreenState extends State<SignupScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 100),
-              Center(child: Image.asset('assets/images/login.jpg')),
+              Center(child: Image.asset('assets/images/login.png')),
               SizedBox(height: 40),
               Text(
                 'ﺇنشاء حساب',
@@ -35,7 +36,7 @@ class _SignupScreenState extends State<SignupScreen> {
               // Email field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -57,7 +58,7 @@ class _SignupScreenState extends State<SignupScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIcon: SizedBox(width: 48),
+                    suffixIcon: SizedBox(width: 48),
                   ),
                 ),
               ),
@@ -65,7 +66,7 @@ class _SignupScreenState extends State<SignupScreen> {
               // Password field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -87,8 +88,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIconConstraints: BoxConstraints(minWidth: 48),
-                    prefixIcon: IconButton(
+                    suffixIconConstraints: BoxConstraints(minWidth: 48),
+                    suffixIcon: IconButton(
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
@@ -102,7 +103,7 @@ class _SignupScreenState extends State<SignupScreen> {
               // Confirmation Password field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -124,8 +125,8 @@ class _SignupScreenState extends State<SignupScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIconConstraints: BoxConstraints(minWidth: 48),
-                    prefixIcon: IconButton(
+                    suffixIconConstraints: BoxConstraints(minWidth: 48),
+                    suffixIcon: IconButton(
                       onPressed: () => setState(
                         () => _confirmationObscure = !_confirmationObscure,
                       ),
@@ -141,12 +142,8 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               SizedBox(height: 25),
               Row(
-                mainAxisAlignment: MainAxisAlignment.end,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Text(
-                    '.أنا أوافق علي كل الشروط والصلاحيات',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
-                  ),
                   Checkbox(
                     value: _agree,
                     onChanged: (value) {
@@ -154,6 +151,11 @@ class _SignupScreenState extends State<SignupScreen> {
                         _agree = value ?? false;
                       });
                     },
+                  ),
+
+                  Text(
+                    'أنا أوافق علي كل الشروط والصلاحيات.',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
                   ),
                 ],
               ),
@@ -164,6 +166,10 @@ class _SignupScreenState extends State<SignupScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 spacing: 6,
                 children: [
+                  Text(
+                    'هل لديك حساب بالفعل؟',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
+                  ),
                   GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
@@ -175,10 +181,6 @@ class _SignupScreenState extends State<SignupScreen> {
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
-                  ),
-                  Text(
-                    'هل لديك حساب بالفعل؟',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
                   ),
                 ],
               ),

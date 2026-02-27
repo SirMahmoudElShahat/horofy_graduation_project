@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
@@ -17,7 +18,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: SingleChildScrollView(
@@ -25,7 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               SizedBox(height: 100),
-              Center(child: Image.asset('assets/images/login.jpg')),
+              Center(child: Image.asset('assets/images/login.png')),
               SizedBox(height: 40),
               Text(
                 'تسجيل الدخول',
@@ -35,7 +36,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Email field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -57,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIcon: SizedBox(width: 48),
+                    suffixIcon: SizedBox(width: 48),
                   ),
                 ),
               ),
@@ -65,7 +66,7 @@ class _LoginScreenState extends State<LoginScreen> {
               // Password field
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.background,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -87,8 +88,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    prefixIconConstraints: BoxConstraints(minWidth: 48),
-                    prefixIcon: IconButton(
+                    suffixIconConstraints: BoxConstraints(minWidth: 48),
+                    suffixIcon: IconButton(
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
@@ -102,8 +103,16 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
+                  Text(
+                    'هل نسيت الرقم السري؟',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
+                  ),
                   Row(
                     children: [
+                      Text(
+                        'تذكرني',
+                        style: AppTextStyles.blackFont.copyWith(fontSize: 14),
+                      ),
                       Checkbox(
                         value: _remember,
                         onChanged: (value) {
@@ -112,15 +121,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                         },
                       ),
-                      Text(
-                        'تذكرني',
-                        style: AppTextStyles.blackFont.copyWith(fontSize: 14),
-                      ),
                     ],
-                  ),
-                  Text(
-                    'هل نسيت الرقم السري؟',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
                   ),
                 ],
               ),
@@ -136,6 +137,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 spacing: 12,
                 children: [
+                  Text(
+                    'حساب جديد؟',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
+                  ),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushNamed(context, signupScreen);
@@ -147,10 +152,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
-                  ),
-                  Text(
-                    'حساب جديد؟',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
                   ),
                 ],
               ),

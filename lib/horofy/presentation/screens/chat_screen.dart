@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/message_bubble.dart.dart';
 
@@ -26,7 +27,7 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
@@ -66,14 +67,30 @@ class _ChatScreenState extends State<ChatScreen> {
           children: [
             Expanded(
               child: _messages.isEmpty
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          'مرحبًا أنا شلبى كيف يمكنني مساعدتك اليوم؟',
-                          style: AppTextStyles.blackFont.copyWith(fontSize: 22),
-                          textAlign: TextAlign.center,
-                        ),
+                  ? SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          const SizedBox(height: 120),
+                          Center(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: Text(
+                                'مرحبًا أنا شلبى كيف يمكنني مساعدتك اليوم؟',
+                                style: AppTextStyles.blackFont.copyWith(
+                                  fontSize: 22,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Image.asset(
+                            "assets/images/chat_image.png",
+                            height: 350,
+                          ),
+                        ],
                       ),
                     )
                   : ListView.builder(

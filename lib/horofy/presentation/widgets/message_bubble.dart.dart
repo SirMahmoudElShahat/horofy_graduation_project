@@ -25,8 +25,8 @@ class MessageBubble extends StatelessWidget {
       alignment: alignment,
       child: Column(
         crossAxisAlignment: isMe
-            ? CrossAxisAlignment.end
-            : CrossAxisAlignment.start,
+            ? CrossAxisAlignment.start
+            : CrossAxisAlignment.end,
         children: [
           Container(
             constraints: BoxConstraints(
@@ -44,12 +44,12 @@ class MessageBubble extends StatelessWidget {
               ),
               border: isMe ? Border.all(color: Colors.grey, width: 2) : null,
             ),
-            child: Text(text, style: AppTextStyles.blackFont),
+            child: Text(text, style: isMe ? AppTextStyles.blackFont : AppTextStyles.whiteFont),
           ),
 
           if (hasButton)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
+              padding: const EdgeInsets.only(top: 3),
               child: ElevatedButton(
                 onPressed: () async {
                   await context.read<OnboardingCubit>().completeOnboarding();

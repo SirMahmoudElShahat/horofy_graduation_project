@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
 class ParentHomeScreen extends StatelessWidget {
@@ -10,7 +11,7 @@ class ParentHomeScreen extends StatelessWidget {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          backgroundColor: Colors.white,
+          backgroundColor: AppColors.background,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -34,6 +35,27 @@ class ParentHomeScreen extends StatelessWidget {
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
+                    _logout(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE57373),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: const Text(
+                    'تأكيد',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFBF8FFE),
@@ -48,27 +70,6 @@ class ParentHomeScreen extends StatelessWidget {
                   ),
                   child: const Text(
                     'إلغاء',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                    _logout(context);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF3D6D9),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                  ),
-                  child: const Text(
-                    'تأكيد',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -89,14 +90,14 @@ class ParentHomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background,
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 30),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const SizedBox(height: 80),
-            Center(child: Image.asset('assets/images/login.jpg')),
+            Center(child: Image.asset('assets/images/login.png')),
             const SizedBox(height: 100),
             CustomButton(
               text: 'لوحة التحكم',
@@ -117,17 +118,17 @@ class ParentHomeScreen extends StatelessWidget {
             CustomButton(
               text: 'قائمة الأطفال',
               onPressed: () {
-                // Navigate to Child Home Screen
+                Navigator.pushNamed(context, childsListScreen);
               },
-              buttonColor: const Color(0xFFE8F5EC),
+              buttonColor: const Color(0xFF64B5F6),
             ),
             const SizedBox(height: 30),
             CustomButton(
               text: 'ٳضافة طفل',
               onPressed: () {
-                // Navigate to Child Home Screen
+                Navigator.pushNamed(context, childInformationScreen);
               },
-              buttonColor: const Color(0xFFFFE5CC),
+              buttonColor: const Color(0xFFFFB74D),
             ),
             const SizedBox(height: 30),
             CustomButton(
@@ -135,7 +136,7 @@ class ParentHomeScreen extends StatelessWidget {
               onPressed: () {
                 _showLogoutDialog(context);
               },
-              buttonColor: const Color(0xFFF3D6D9),
+              buttonColor: const Color(0xFFE57373),
             ),
           ],
         ),
