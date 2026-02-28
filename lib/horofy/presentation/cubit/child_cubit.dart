@@ -31,11 +31,16 @@ class ChildCubit extends Cubit<ChildState> {
 
   /// GET LIST
   Future<void> loadChildren() async {
-    emit(ChildLoading());
+    try {
+      emit(ChildLoading());
 
-    final children = await getChildrenUseCase();
+      final children = await getChildrenUseCase();
 
-    emit(ChildLoaded(children));
+      emit(ChildLoaded(children));
+    } catch (e) {
+      // If fetching fails (e.g. DB not ready), emit an empty list to keep UI stable
+      emit(const ChildLoaded([]));
+    }
   }
 
   /// DELETE
