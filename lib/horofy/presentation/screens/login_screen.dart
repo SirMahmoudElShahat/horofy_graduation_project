@@ -58,7 +58,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    suffixIcon: SizedBox(width: 48),
+                    prefixIcon: SizedBox(width: 48),
                   ),
                 ),
               ),
@@ -88,12 +88,12 @@ class _LoginScreenState extends State<LoginScreen> {
                       horizontal: 16,
                       vertical: 18,
                     ),
-                    suffixIconConstraints: BoxConstraints(minWidth: 48),
-                    suffixIcon: IconButton(
+                    prefixIconConstraints: BoxConstraints(minWidth: 48),
+                    prefixIcon: IconButton(
                       onPressed: () => setState(() => _obscure = !_obscure),
                       icon: Icon(
                         _obscure ? Icons.visibility_off : Icons.visibility,
-                        color: Colors.grey[600],
+                        color: Colors.black,
                       ),
                     ),
                   ),
@@ -103,16 +103,8 @@ class _LoginScreenState extends State<LoginScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    'هل نسيت الرقم السري؟',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
-                  ),
                   Row(
                     children: [
-                      Text(
-                        'تذكرني',
-                        style: AppTextStyles.blackFont.copyWith(fontSize: 14),
-                      ),
                       Checkbox(
                         value: _remember,
                         onChanged: (value) {
@@ -121,11 +113,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           });
                         },
                       ),
+                      Text(
+                        'تذكرني',
+                        style: AppTextStyles.blackFont.copyWith(fontSize: 14),
+                      ),
                     ],
+                  ),
+                  Text(
+                    'هل نسيت الرقم السري؟',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
                   ),
                 ],
               ),
               SizedBox(height: 25),
+              // Login button
               CustomButton(
                 text: 'ابدأ',
                 onPressed: () {
@@ -137,10 +138,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 spacing: 12,
                 children: [
-                  Text(
-                    'حساب جديد؟',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
-                  ),
                   GestureDetector(
                     onTap: () {
                       Navigator.pushNamed(context, signupScreen);
@@ -152,6 +149,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Theme.of(context).primaryColor,
                       ),
                     ),
+                  ),
+
+                  Text(
+                    'حساب جديد؟',
+                    style: AppTextStyles.blackFont.copyWith(fontSize: 18),
                   ),
                 ],
               ),

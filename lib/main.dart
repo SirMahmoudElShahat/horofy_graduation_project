@@ -1,21 +1,42 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:horofy/app_router.dart';
 import 'package:horofy/core/cache/cache_helper.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
+import 'package:horofy/horofy/data/datasources/child_local_datasource.dart';
 import 'package:horofy/horofy/data/datasources/local_data_source.dart';
+import 'package:horofy/horofy/data/repositories/child_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/onboarding_repository_impl.dart';
+import 'package:horofy/horofy/domain/usecases/add_child_usecase.dart';
+import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await CacheHelper.init();
   runApp(
-    BlocProvider(
-      create: (context) =>
-          OnboardingCubit(OnboardingRepositoryImpl(LocalDataSourceImpl())),
+    MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (context) =>
+              OnboardingCubit(OnboardingRepositoryImpl(LocalDataSourceImpl())),
+        ),
+        BlocProvider(
+          create: (context) {
+            final repository = ChildRepositoryImpl(ChildLocalDataSourceImpl());
+            return ChildCubit(
+              AddChildUseCase(repository),
+              addChild: AddChildUseCase(repository),
+              getChildrenUseCase: GetChildrenUseCase(repository),
+              deleteChildUseCase: DeleteChildUseCase(repository),
+              updateChildUseCase: UpdateChildUseCase(repository),
+            );
+          },
+        ),
+      ],
       child: Horofy(appRouter: AppRouter()),
     ),
   );
@@ -29,7 +50,7 @@ class Horofy extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     precacheImage(const AssetImage('assets/images/splash.gif'), context);
-    return MaterialApp(
+    return GetMaterialApp(
       title: 'Horoofy حروفى',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primaryColor: AppColors.primary),

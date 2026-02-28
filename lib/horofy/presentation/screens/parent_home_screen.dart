@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
@@ -24,7 +25,7 @@ class ParentHomeScreen extends StatelessWidget {
             textAlign: TextAlign.center,
           ),
           content: const Text(
-            'هل أنت متأكد من أنك تريد تسجيل الخروج؟ سيتم إعادة توجيهك إلى صفحة تسجيل الدخول.',
+            'هل أنت متأكد من أنك تريد تسجيل الخروج؟ سيتم إعادة توجيهك إلى صفحة تسجيل الدخول',
             style: TextStyle(color: Colors.black87),
             textAlign: TextAlign.center,
           ),
@@ -32,6 +33,27 @@ class ParentHomeScreen extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.of(context).pop();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFBF8FFE),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 10,
+                    ),
+                  ),
+                  child: const Text(
+                    'إلغاء',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
@@ -53,26 +75,6 @@ class ParentHomeScreen extends StatelessWidget {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFBF8FFE),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                  ),
-                  child: const Text(
-                    'إلغاء',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
-                ),
               ],
             ),
           ],
@@ -82,9 +84,31 @@ class ParentHomeScreen extends StatelessWidget {
   }
 
   void _logout(BuildContext context) {
+    _showSnackBar(context, 'تم', 'تم تسجيل الخروج بنجاح', isError: false);
     Navigator.of(
       context,
     ).pushNamedAndRemoveUntil(loginScreen, (Route<dynamic> route) => false);
+  }
+
+  void _showSnackBar(
+    BuildContext context,
+    String title,
+    String message, {
+    bool isError = true,
+  }) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: isError
+          ? Colors.redAccent.withOpacity(0.9)
+          : Colors.green.withOpacity(0.9),
+      colorText: Theme.of(context).cardColor,
+      icon: Icon(
+        isError ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+        color: Theme.of(context).cardColor,
+      ),
+    );
   }
 
   @override

@@ -18,56 +18,67 @@ class AppRouter {
     switch (settings.name) {
       case splashScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const SplashScreen()),
         );
 
       case loginScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const LoginScreen()),
         );
 
       case signupScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const SignupScreen()),
         );
 
       case onboardingScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const OnboardingScreen()),
         );
 
       case visitorScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const VisitorScreen()),
         );
 
       case onboardingChatScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const OnboardingChatScreen()),
         );
 
       case mainHomeScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const MainHomeScreen()),
         );
 
       case parentHomeScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const ParentHomeScreen()),
         );
 
       case chatScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const ChatScreen()),
         );
 
       case childInformationScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const ChildInformationScreen()),
         );
 
       case childsListScreen:
         return MaterialPageRoute(
+          settings: settings,
           builder: (_) => OfflineWrapper(child: const ChildsListScreen()),
         );
 
