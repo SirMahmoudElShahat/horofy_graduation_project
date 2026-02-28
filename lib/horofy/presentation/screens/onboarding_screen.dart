@@ -49,6 +49,34 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
+                // Dots indicators
+                Row(
+                  textDirection: TextDirection.rtl,
+                  children: List.generate(images.length, (i) {
+                    final bool active = i == currentIndex;
+                    return GestureDetector(
+                      onTap: () => _controller.animateToPage(
+                        i,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      ),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.symmetric(horizontal: 6),
+                        width: active ? 14 : 10,
+                        height: active ? 14 : 10,
+                        decoration: BoxDecoration(
+                          color: active
+                              ? Theme.of(context).primaryColor
+                              : Colors.white.withOpacity(0.7),
+                          border: Border.all(color: Colors.white70),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+
                 // Next or Finish button
                 currentIndex == images.length - 1
                     ? ElevatedButton(
@@ -97,34 +125,6 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           ),
                         ),
                       ),
-
-                // Dots indicators
-                Row(
-                  textDirection: TextDirection.ltr,
-                  children: List.generate(images.length, (i) {
-                    final bool active = i == currentIndex;
-                    return GestureDetector(
-                      onTap: () => _controller.animateToPage(
-                        i,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                      ),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.symmetric(horizontal: 6),
-                        width: active ? 14 : 10,
-                        height: active ? 14 : 10,
-                        decoration: BoxDecoration(
-                          color: active
-                              ? Theme.of(context).primaryColor
-                              : Colors.white.withOpacity(0.7),
-                          border: Border.all(color: Colors.white70),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    );
-                  }),
-                ),
               ],
             ),
           ),
