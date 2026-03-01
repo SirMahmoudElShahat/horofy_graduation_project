@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 import 'package:horofy/horofy/presentation/screens/login_screen.dart';
 import 'package:horofy/horofy/presentation/screens/onboarding_screen.dart';
@@ -15,6 +16,7 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    OrientationHelper.portrait();
     _goNext();
   }
 

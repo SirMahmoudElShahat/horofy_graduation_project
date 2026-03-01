@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/core/style/font_style.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -20,12 +21,18 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    OrientationHelper.portrait();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Stack(
         children: [
           PageView.builder(
-            reverse: true,
+            reverse: false,
             controller: _controller,
             itemCount: images.length,
             onPageChanged: (index) {
@@ -51,7 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               children: [
                 // Dots indicators
                 Row(
-                  textDirection: TextDirection.rtl,
+                  textDirection: TextDirection.ltr,
                   children: List.generate(images.length, (i) {
                     final bool active = i == currentIndex;
                     return GestureDetector(
