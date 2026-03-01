@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
@@ -20,6 +21,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
   @override
   void initState() {
     super.initState();
+    OrientationHelper.portrait();
     context.read<ChildCubit>().loadChildren();
   }
 

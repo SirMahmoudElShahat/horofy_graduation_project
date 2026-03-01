@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/message_bubble.dart.dart';
@@ -17,6 +18,13 @@ class _ChatScreenState extends State<ChatScreen> {
     //{"text": "أهلاً! عامل إيه؟ 👋", "isMe": true},
     //{"text": "تمام الحمد لله، وانت؟ 😊", "isMe": false},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    OrientationHelper.portrait();
+  }
+
 
   @override
   void dispose() {
