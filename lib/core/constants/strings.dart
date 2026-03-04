@@ -11,3 +11,4 @@ const String chatScreen = '/login/main_home/parent_home/chat';
 const String childInformationScreen =
     '/login/main_home/parent_home/child_information';
 const String childsListScreen = '/login/main_home/parent_home/childs_list';
+const String childHomeScreen = '/login/main_home/child_home';

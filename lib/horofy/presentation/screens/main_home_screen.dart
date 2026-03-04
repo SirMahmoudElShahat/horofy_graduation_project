@@ -77,7 +77,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                             child: CustomButton(
                               text: child.name,
                               onPressed: () {
-                                // Navigate to Child Home Screen
+                                Navigator.pushNamed(context, childHomeScreen, arguments: child);
                               },
                             ),
                           );
