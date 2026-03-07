@@ -17,6 +17,7 @@ class ChildRepositoryImpl implements ChildRepository {
         birthDate: child.birthDate,
         gender: child.gender,
         avatar: child.avatar,
+        level: child.level,
       ),
     );
   }
@@ -40,6 +41,7 @@ class ChildRepositoryImpl implements ChildRepository {
         birthDate: child.birthDate,
         gender: child.gender,
         avatar: child.avatar,
+        level: child.level,
       ),
     );
   }

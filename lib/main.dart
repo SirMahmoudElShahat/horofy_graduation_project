@@ -7,11 +7,15 @@ import 'package:horofy/core/cache/cache_helper.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/data/datasources/child_local_datasource.dart';
+import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/datasources/local_data_source.dart';
 import 'package:horofy/horofy/data/repositories/child_repository_impl.dart';
+import 'package:horofy/horofy/data/repositories/letters_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/onboarding_repository_impl.dart';
 import 'package:horofy/horofy/domain/usecases/add_child_usecase.dart';
+import 'package:horofy/horofy/domain/usecases/letters_usecase.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/letters_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 
 void main() async {
@@ -20,10 +24,13 @@ void main() async {
   runApp(
     MultiBlocProvider(
       providers: [
+        /// onboarding
         BlocProvider(
           create: (context) =>
               OnboardingCubit(OnboardingRepositoryImpl(LocalDataSourceImpl())),
         ),
+
+        /// children
         BlocProvider(
           create: (context) {
             final repository = ChildRepositoryImpl(ChildLocalDataSourceImpl());
@@ -34,6 +41,19 @@ void main() async {
               deleteChildUseCase: DeleteChildUseCase(repository),
               updateChildUseCase: UpdateChildUseCase(repository),
             );
+          },
+        ),
+
+        /// Letters Feature
+        BlocProvider(
+          create: (context) {
+            final dataSource = LettersLocalDataSourceImpl();
+
+            final repository = LettersRepositoryImpl(dataSource);
+
+            final getLetters = GetLettersUseCase(repository);
+
+            return LettersCubit(getLetters)..loadLetters();
           },
         ),
       ],

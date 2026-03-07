@@ -415,6 +415,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
           birthDate: dateController.text,
           gender: selectedGender,
           avatar: _images[selectedAvatar],
+          level: editingChild?.level ?? 'level1',
         );
 
         if (editingChild == null) {

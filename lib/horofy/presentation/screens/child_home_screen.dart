@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
@@ -12,7 +13,7 @@ class ChildHomeScreen extends StatefulWidget {
 }
 
 class _ChildHomeScreenState extends State<ChildHomeScreen> {
-  final double _progress = 0.1;
+  // final double _progress = 0.1; // Commented out to use computed progress
 
   @override
   void initState() {
@@ -28,6 +29,20 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final arg = ModalRoute.of(context)?.settings.arguments;
+    final ChildEntity? child = arg is ChildEntity ? arg : null;
+
+    // compute progress from child's level (level1..level7)
+    double progress = 0.0;
+    if (child != null) {
+      final lvl = child.level;
+      int num = 1;
+      if (lvl.startsWith('level')) {
+        final parsed = int.tryParse(lvl.replaceFirst('level', ''));
+        if (parsed != null && parsed >= 1 && parsed <= 7) num = parsed;
+      }
+      progress = (num / 7).clamp(0.0, 1.0);
+    }
     return Container(
       decoration: BoxDecoration(
         image: DecorationImage(
@@ -40,8 +55,8 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
           //child info (show avatar + name when passed as argument)
           Builder(
             builder: (context) {
-              final arg = ModalRoute.of(context)?.settings.arguments;
-              final ChildEntity? child = arg is ChildEntity ? arg : null;
+              // final arg = ModalRoute.of(context)?.settings.arguments;
+              // final ChildEntity? child = arg is ChildEntity ? arg : null;
 
               return child != null
                   ? Positioned(
@@ -107,7 +122,7 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final barWidth = constraints.maxWidth;
-                  final filledWidth = (barWidth * _progress).clamp(
+                  final filledWidth = (barWidth * progress).clamp(
                     0.0,
                     barWidth,
                   );
@@ -155,7 +170,11 @@ class _ChildHomeScreenState extends State<ChildHomeScreen> {
             left: MediaQuery.of(context).size.width * 0.5 - 50,
             child: GestureDetector(
               onTap: () {
-                // TODO: Add game navigation logic
+                Navigator.pushNamed(
+                  context,
+                  childLevelsScreen,
+                  arguments: child,
+                );
               },
               child: Container(
                 width: 100,

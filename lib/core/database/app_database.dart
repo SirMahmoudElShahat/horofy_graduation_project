@@ -15,7 +15,7 @@ class AppDatabase {
 
     return openDatabase(
       join(dbPath, 'horofy.db'),
-      version: 1,
+      version: 2,
       onCreate: (db, version) async {
         await db.execute('''
         CREATE TABLE children(
@@ -23,9 +23,16 @@ class AppDatabase {
           name TEXT,
           birthDate TEXT,
           gender INTEGER,
-          avatar TEXT
+          avatar TEXT,
+          level TEXT DEFAULT 'level1'
         )
         ''');
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          await db.execute(
+              "ALTER TABLE children ADD COLUMN level TEXT DEFAULT 'level1'");
+        }
       },
     );
   }

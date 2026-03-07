@@ -7,6 +7,7 @@ class ChildModel extends ChildEntity {
     required super.birthDate,
     required super.gender,
     required super.avatar,
+    super.level,
   });
 
   Map<String, dynamic> toMap() {
@@ -16,6 +17,7 @@ class ChildModel extends ChildEntity {
       'birthDate': birthDate,
       'gender': gender,
       'avatar': avatar,
+      'level': level,
     };
   }
 
@@ -26,6 +28,7 @@ class ChildModel extends ChildEntity {
       birthDate: map['birthDate'],
       gender: map['gender'],
       avatar: map['avatar'],
+      level: map['level'] ?? 'level1',
     );
   }
 }
