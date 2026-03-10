@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 
 class OnboardingScreen extends StatefulWidget {
   const OnboardingScreen({super.key});
@@ -88,7 +90,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 currentIndex == images.length - 1
                     ? ElevatedButton(
                         onPressed: () async {
-                          Navigator.pushNamed(context, visitorScreen);
+                          await context
+                              .read<OnboardingCubit>()
+                              .completeOnboarding();
+                          Navigator.pushNamed(context, signupScreen);
+                          //Navigator.pushNamed(context, visitorScreen);
                           //await context.read<OnboardingCubit>().completeOnboarding();
                         },
                         style: ElevatedButton.styleFrom(

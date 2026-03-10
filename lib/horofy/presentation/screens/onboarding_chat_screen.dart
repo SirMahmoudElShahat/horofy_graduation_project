@@ -56,8 +56,7 @@ class _OnboardingChatScreenState extends State<OnboardingChatScreen> {
             padding: const EdgeInsets.only(right: 6),
             child: TextButton(
               onPressed: () async {
-                await context.read<OnboardingCubit>().completeOnboarding();
-                Navigator.pushNamed(context, loginScreen);
+                Navigator.pushNamed(context, mainHomeScreen);
               },
               child: const Text("تخطى", style: AppTextStyles.greyFont),
             ),

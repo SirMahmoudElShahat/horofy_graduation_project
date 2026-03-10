@@ -6,6 +6,7 @@ class ChildEntity extends Equatable {
   final String birthDate;
   final int gender;
   final String avatar;
+  final String level;
 
   const ChildEntity({
     this.id,
@@ -13,9 +14,9 @@ class ChildEntity extends Equatable {
     required this.birthDate,
     required this.gender,
     required this.avatar,
-  });
+    String? level,
+  }) : level = level ?? 'level1';
 
   @override
-  List<Object?> get props =>
-      [id, name, birthDate, gender, avatar];
+  List<Object?> get props => [id, name, birthDate, gender, avatar, level];
 }

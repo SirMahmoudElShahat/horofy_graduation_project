@@ -140,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   GestureDetector(
                     onTap: () {
-                      Navigator.pushNamed(context, signupScreen);
+                      Navigator.pushReplacementNamed(context, signupScreen);
                     },
                     child: Text(
                       'ﺇضغط هنا',

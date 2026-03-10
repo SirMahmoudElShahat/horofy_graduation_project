@@ -43,6 +43,9 @@ dependencies:
   path: ^1.9.1
   equatable: ^2.0.8
   get: ^4.7.3
+  audioplayers: ^6.6.0
+  flutter_tts: ^4.2.5
+  speech_to_text: ^7.3.0
   
 
 dev_dependencies:
@@ -78,6 +81,9 @@ flutter:
   assets:
     - assets/images/
     - assets/images/child/
+    - assets/images/letters/
+    - assets/sounds/letter_name/
+    - assets/sounds/letter_sound/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images
