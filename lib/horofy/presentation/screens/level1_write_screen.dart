@@ -1,11 +1,91 @@
 import 'dart:math';
+import 'dart:ui' as ui;
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
 
 // ============================================================
-//  Level1WriteScreen  –  حرف ب قابل للتتبع بالإصبع
+//  LetterPixelMap  —  خريطة بكسلات الحرف في الميموري
 // ============================================================
+class LetterPixelMap {
+  final Uint8List _alpha;
+  final int width;
+  final int height;
 
+  LetterPixelMap._(this._alpha, this.width, this.height);
+
+  static Future<LetterPixelMap> build(
+      String letter, double canvasWidth, double canvasHeight) async {
+    final w = canvasWidth.toInt();
+    final h = canvasHeight.toInt();
+
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(
+      recorder,
+      Rect.fromLTWH(0, 0, canvasWidth, canvasHeight),
+    );
+
+    // نفس الـ fontSize المستخدم في الـ painter
+    final fontSize = canvasWidth * 0.65;
+
+    final tp = TextPainter(
+      text: TextSpan(
+        text: letter,
+        style: TextStyle(
+          fontSize: fontSize,
+          color: Colors.black,
+          fontWeight: FontWeight.bold,
+          height: 1.4, // نفس الـ height المستخدم في الـ painter
+        ),
+      ),
+      textDirection: TextDirection.rtl,
+    );
+    tp.layout(maxWidth: canvasWidth);
+
+    // نفس حساب الـ offset المستخدم في الـ painter
+    final offsetX = (canvasWidth - tp.width) / 2;
+    final offsetY = (canvasHeight - tp.height) / 2;
+    tp.paint(canvas, Offset(offsetX, offsetY));
+
+    final picture = recorder.endRecording();
+    final image = await picture.toImage(w, h);
+    final byteData = await image.toByteData(format: ui.ImageByteFormat.rawRgba);
+    image.dispose();
+
+    if (byteData == null) return LetterPixelMap._(Uint8List(0), w, h);
+
+    final rgba = byteData.buffer.asUint8List();
+    final alpha = Uint8List(w * h);
+    for (int i = 0; i < w * h; i++) {
+      alpha[i] = rgba[i * 4 + 3];
+    }
+
+    return LetterPixelMap._(alpha, w, h);
+  }
+
+  bool isOnLetter(Offset point) {
+    final x = point.dx.round();
+    final y = point.dy.round();
+    if (x < 0 || y < 0 || x >= width || y >= height) return false;
+    return _alpha[y * width + x] > 30;
+  }
+
+  Set<int> get letterPixelIndices {
+    final set = <int>{};
+    for (int i = 0; i < _alpha.length; i++) {
+      if (_alpha[i] > 30) set.add(i);
+    }
+    return set;
+  }
+
+  int toIndex(Offset point) {
+    return point.dy.round() * width + point.dx.round();
+  }
+}
+
+// ============================================================
+//  Level1WriteScreen
+// ============================================================
 class Level1WriteScreen extends StatefulWidget {
   const Level1WriteScreen({super.key});
 
@@ -18,16 +98,27 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   final List<Offset> _touchPoints = [];
   bool _completed = false;
 
-  static const double _canvasSize = 300;
+  String get _currentLetter =>
+      ModalRoute.of(context)?.settings.arguments as String? ?? '';
 
-  // ── Confetti particles ──────────────────────────────────
+  static const double _brushRadius = 28;
+  static const double _requiredCoverage = 0.85;
+
   final List<_ConfettiParticle> _particles = [];
   late AnimationController _confettiController;
+
+  LetterPixelMap? _pixelMap;
+  Set<int>? _totalLetterPixels;
+  final Set<int> _coveredPixels = {};
+  String _cachedLetter = '';
+
+  // الـ canvas له عرض وارتفاع منفصلين عشان الحروف اللي بتتمد فوق/تحت
+  double _canvasWidth = 0;
+  double _canvasHeight = 0;
 
   @override
   void initState() {
     super.initState();
-
     _confettiController =
         AnimationController(vsync: this, duration: const Duration(seconds: 4))
           ..addListener(() {
@@ -40,9 +131,82 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final letter = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+    if (letter.isNotEmpty && letter != _cachedLetter) {
+      _schedulePixelMapBuild(letter);
+    }
+  }
+
+  void _schedulePixelMapBuild(String letter) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _buildPixelMap(letter);
+    });
+  }
+
+  Future<void> _buildPixelMap(String letter) async {
+    if (_canvasWidth == 0 || _canvasHeight == 0) return;
+    final map =
+        await LetterPixelMap.build(letter, _canvasWidth, _canvasHeight);
+    if (!mounted) return;
+    setState(() {
+      _pixelMap = map;
+      _totalLetterPixels = map.letterPixelIndices;
+      _coveredPixels.clear();
+      _cachedLetter = letter;
+    });
+  }
+
+  @override
   void dispose() {
     _confettiController.dispose();
     super.dispose();
+  }
+
+  void _onPointerMove(PointerMoveEvent event, RenderBox box) {
+    if (_completed || _pixelMap == null) return;
+    final localPos = box.globalToLocal(event.position);
+
+    if (localPos.dx < 0 ||
+        localPos.dy < 0 ||
+        localPos.dx > _canvasWidth ||
+        localPos.dy > _canvasHeight) {
+      return;
+    }
+
+    if (_touchPoints.isNotEmpty &&
+        (_touchPoints.last - localPos).distance <= _brushRadius * 0.4) {
+      return;
+    }
+
+    bool addedNew = false;
+    final r = _brushRadius.toInt();
+    final cx = localPos.dx.round();
+    final cy = localPos.dy.round();
+
+    for (int dy = -r; dy <= r; dy++) {
+      for (int dx = -r; dx <= r; dx++) {
+        if (dx * dx + dy * dy > r * r) continue;
+        final px = cx + dx;
+        final py = cy + dy;
+        final pt = Offset(px.toDouble(), py.toDouble());
+        if (_pixelMap!.isOnLetter(pt)) {
+          final idx = _pixelMap!.toIndex(pt);
+          if (_coveredPixels.add(idx)) addedNew = true;
+        }
+      }
+    }
+
+    setState(() => _touchPoints.add(localPos));
+
+    if (addedNew) _checkCompletion();
+  }
+
+  void _checkCompletion() {
+    if (_totalLetterPixels == null || _totalLetterPixels!.isEmpty) return;
+    final coverage = _coveredPixels.length / _totalLetterPixels!.length;
+    if (coverage >= _requiredCoverage) _onCompleted();
   }
 
   void _onCompleted() {
@@ -55,33 +219,16 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
     }
     _confettiController.repeat();
 
-    // انتقل لشاشة النتيجة بعد ثانية تقريباً عشان الطفل يشوف الكونفيتي
-    Future.delayed(const Duration(milliseconds: 1000), () {
+    Future.delayed(const Duration(milliseconds: 1200), () {
       if (!mounted) return;
       _confettiController.stop();
       final navigator = Navigator.of(context);
       Navigator.pushReplacementNamed(
         context,
         exercisesResultScreen,
-        arguments: () {
-          navigator.pop();
-        },
+        arguments: () => navigator.pop(),
       );
     });
-  }
-
-  void _onPointerMove(PointerMoveEvent event, RenderBox box) {
-    if (_completed) return;
-    final localPos = box.globalToLocal(event.position);
-    if (localPos.dx < 0 ||
-        localPos.dy < 0 ||
-        localPos.dx > _canvasSize ||
-        localPos.dy > _canvasSize)
-      return;
-
-    setState(() => _touchPoints.add(localPos));
-
-    if (_touchPoints.length > 180) _onCompleted();
   }
 
   void _reset() {
@@ -90,70 +237,112 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
       _touchPoints.clear();
       _completed = false;
       _particles.clear();
+      _coveredPixels.clear();
+      _pixelMap = null;
+      _totalLetterPixels = null;
+      _cachedLetter = '';
     });
+    _buildPixelMap(_currentLetter);
   }
 
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
+    // تحديد حجم مربع الرسم بناءً على أصغر بعد للشاشة لضمان ظهور الحرف بالكامل وبحجم مناسب
+    final double boxSize = (screenSize.shortestSide * 0.75).clamp(200.0, 350.0);
+    final canvasWidth = boxSize;
+    final canvasHeight = boxSize;
+
+    // لو الأبعاد اتغيرت نعيد البناء
+    if (canvasWidth != _canvasWidth || canvasHeight != _canvasHeight) {
+      _canvasWidth = canvasWidth;
+      _canvasHeight = canvasHeight;
+      if (_cachedLetter.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _buildPixelMap(_currentLetter);
+        });
+      } else if (_currentLetter.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _buildPixelMap(_currentLetter);
+        });
+      }
+    }
+
     return Scaffold(
       backgroundColor: const Color(0xFFFAEFE4),
       body: Stack(
         children: [
-          // ── الحرف في وسط الشاشة تماماً ──────────────────
-          Center(
-            child: Builder(
-              builder: (ctx) => Listener(
-                onPointerMove: (event) {
-                  final box = ctx.findRenderObject() as RenderBox?;
-                  if (box != null) _onPointerMove(event, box);
-                },
-                child: SizedBox(
-                  width: _canvasSize,
-                  height: _canvasSize,
-                  child: CustomPaint(
-                    painter: LetterTracePainter(
-                      letter: 'ب',
-                      touchPoints: List.unmodifiable(_touchPoints),
-                      traceColor: const Color(0xFF774019),
-                      brushRadius: 28,
+          SafeArea(
+            child: Column(
+              children: [
+                // ── header ──────────────────────────────────────
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 12,
+                  ),
+                  child: Row(
+                    children: [
+                      const SizedBox(width: 48),
+                      const Expanded(
+                        child: Text(
+                          'مشّي إصبعك على الحرف 👆',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'Cairo',
+                            fontSize: 18,
+                            color: Colors.black45,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(
+                          Icons.refresh,
+                          color: Colors.black38,
+                          size: 28,
+                        ),
+                        onPressed: _reset,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // ── الحرف ───────────────────────────────────────
+                Expanded(
+                  child: Align(
+                    alignment: Alignment.bottomCenter,
+                    child: Builder(
+                      builder: (ctx) => Listener(
+                        onPointerMove: (event) {
+                          final box = ctx.findRenderObject() as RenderBox?;
+                          if (box != null) _onPointerMove(event, box);
+                        },
+                        child: SizedBox(
+                          width: canvasWidth,
+                          height: canvasHeight,
+                          child: CustomPaint(
+                            painter: LetterTracePainter(
+                              letter: _currentLetter,
+                              touchPoints: List.unmodifiable(_touchPoints),
+                              traceColor: const Color(0xFF774019),
+                              brushRadius: _brushRadius,
+                              canvasWidth: canvasWidth,
+                              canvasHeight: canvasHeight,
+                            ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
                 ),
-              ),
+
+                const SizedBox(height: 20),
+              ],
             ),
           ),
 
-          // ── تعليمات (بس لو مش مكتمل) ────────────────────
-          if (!_completed)
-            Positioned(
-              top: 80,
-              left: 0,
-              right: 0,
-              child: const Text(
-                'مشّي إصبعك على الحرف 👆',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Cairo',
-                  fontSize: 20,
-                  color: Colors.black45,
-                ),
-              ),
-            ),
-
-          // ── زرار reset ───────────────────────────────────
-          if (!_completed)
-            Positioned(
-              top: 40,
-              right: 16,
-              child: IconButton(
-                icon: const Icon(Icons.refresh, color: Colors.black38),
-                onPressed: _reset,
-              ),
-            ),
-
-          // ── Confetti ─────────────────────────────────────
+          // ── Confetti ────────────────────────────────────────
           if (_completed)
             IgnorePointer(
               child: SizedBox(
@@ -172,14 +361,8 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
 //  Confetti Particle
 // ============================================================
 class _ConfettiParticle {
-  late double x;
-  late double y;
-  late double speedX;
-  late double speedY;
+  late double x, y, speedX, speedY, size, rotation, rotationSpeed;
   late Color color;
-  late double size;
-  late double rotation;
-  late double rotationSpeed;
 
   static const _colors = [
     Colors.red,
@@ -254,22 +437,31 @@ class LetterTracePainter extends CustomPainter {
   final List<Offset> touchPoints;
   final Color traceColor;
   final double brushRadius;
+  final double? canvasWidth;
+  final double? canvasHeight;
 
   LetterTracePainter({
     required this.letter,
     required this.touchPoints,
     required this.traceColor,
     this.brushRadius = 24,
+    this.canvasWidth,
+    this.canvasHeight,
   });
 
   TextPainter _buildTextPainter(Size size, Color color) {
+    final refWidth = canvasWidth ?? size.width;
+    // نفس الـ fontSize المستخدم في LetterPixelMap.build
+    final fontSize = refWidth * 0.65;
+
     final tp = TextPainter(
       text: TextSpan(
         text: letter,
         style: TextStyle(
-          fontSize: size.width * 0.85,
+          fontSize: fontSize,
           color: color,
           fontWeight: FontWeight.bold,
+          height: 1.4, // نزيد الـ line height عشان الحروف اللي بتتمد تحت زي ج
         ),
       ),
       textDirection: TextDirection.rtl,
@@ -283,15 +475,13 @@ class LetterTracePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // ١: الحرف الباهت
+    // الحرف الباهت (الـ ghost)
     final ghost = _buildTextPainter(size, traceColor.withOpacity(0.15));
     ghost.paint(canvas, _letterOffset(ghost, size));
 
     if (touchPoints.isEmpty) return;
 
     final rect = Rect.fromLTWH(0, 0, size.width, size.height);
-
-    // ٢: layer للـ trace مع mask
     canvas.saveLayer(rect, Paint());
 
     final tracePaint = Paint()
@@ -303,7 +493,7 @@ class LetterTracePainter extends CustomPainter {
       canvas.drawCircle(point, brushRadius, tracePaint);
     }
 
-    // mask بشكل الحرف
+    // mask بشكل الحرف — اللون بيظهر بس جوا الحرف
     final mask = _buildTextPainter(size, Colors.black);
     canvas.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
     mask.paint(canvas, _letterOffset(mask, size));
@@ -314,5 +504,6 @@ class LetterTracePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(LetterTracePainter old) =>
-      old.touchPoints.length != touchPoints.length;
+      old.touchPoints.length != touchPoints.length ||
+      old.letter != letter;
 }

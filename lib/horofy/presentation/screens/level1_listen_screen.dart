@@ -1,10 +1,12 @@
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/models/letter_model.dart';
+import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -93,7 +95,7 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
     });
   }
 
-  void _onSpeechResult(SpeechRecognitionResult result) {
+  Future<void> _onSpeechResult(SpeechRecognitionResult result) async {
     String spokenWords = normalizeArabic(result.recognizedWords);
 
     if (spokenWords.isEmpty) return;
@@ -129,7 +131,11 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
           context,
           exercisesResultScreen,
           arguments: () {
-            Navigator.pushReplacementNamed(context, level1WriteScreen);
+            Navigator.pushReplacementNamed(
+              context,
+              level1WriteScreen,
+              arguments: currentLetter.letter,
+            );
           },
         );
         setState(() {
@@ -137,6 +143,7 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
           _isPracticeMode = false;
         });
       } else {
+        //await context.read<ChildCubit>().updateLevel(child!.id!, 'level1');
         _showSnackBar(context, "مبروك", "أنهيت جميع الحروف!", isError: false);
       }
     } else {
@@ -156,7 +163,7 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
     Get.snackbar(
       title,
       message,
-      snackPosition: SnackPosition.TOP,
+      snackPosition: isError ? SnackPosition.TOP : SnackPosition.BOTTOM,
       backgroundColor: isError
           ? Colors.redAccent.withOpacity(0.9)
           : Colors.green.withOpacity(0.9),
@@ -165,6 +172,7 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
         isError ? Icons.warning_amber_rounded : Icons.check_circle_outline,
         color: Theme.of(context).cardColor,
       ),
+      duration: const Duration(seconds: 2),
     );
   }
 

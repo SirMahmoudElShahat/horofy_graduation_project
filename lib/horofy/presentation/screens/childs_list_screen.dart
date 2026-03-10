@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/constants/levels.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/domain/entities/child_entity.dart';
@@ -176,6 +177,15 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
                   textAlign: TextAlign.right,
                   style: AppTextStyles.blackFont.copyWith(
                     fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  levelEnToArabic(child.level),
+                  style: AppTextStyles.greyFont.copyWith(
+                    fontSize: 14,
+                    color: Theme.of(context).primaryColor,
                     fontWeight: FontWeight.bold,
                   ),
                 ),

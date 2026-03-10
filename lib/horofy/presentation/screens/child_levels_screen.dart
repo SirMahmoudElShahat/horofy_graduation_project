@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:get/get.dart';
 import 'package:horofy/core/constants/levels.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/font_style.dart';
@@ -38,9 +39,7 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
       if (parsed != null) num = parsed;
     }
     if (num >= 7) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('لا يوجد مستوى أعلى')));
+      _showSnackBar(context, "تنبيه", "لا يوجد مستوى أعلى");
       return;
     }
 
@@ -52,14 +51,36 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
       setState(() {
         currentLevelEn = nextEn;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('تم الترقية إلى ${levelEnToArabic(nextEn)}')),
+      _showSnackBar(
+        context,
+        "تم بنجاح",
+        'تم الترقية إلى ${levelEnToArabic(nextEn)}',
+        isError: false,
       );
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('خطأ في التحديث')));
+      _showSnackBar(context, "خطأ", "خطأ في التحديث");
     }
+  }
+
+  void _showSnackBar(
+    BuildContext context,
+    String title,
+    String message, {
+    bool isError = true,
+  }) {
+    Get.snackbar(
+      title,
+      message,
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: isError
+          ? Colors.redAccent.withOpacity(0.9)
+          : Colors.green.withOpacity(0.9),
+      colorText: Theme.of(context).cardColor,
+      icon: Icon(
+        isError ? Icons.warning_amber_rounded : Icons.check_circle_outline,
+        color: Theme.of(context).cardColor,
+      ),
+    );
   }
 
   @override

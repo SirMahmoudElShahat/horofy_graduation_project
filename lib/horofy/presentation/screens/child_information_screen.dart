@@ -228,6 +228,9 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
                 ),
                 onPressed: () {
                   setState(() {
+                    if (selectedGender != 0) {
+                      selectedAvatar = -1;
+                    }
                     selectedGender = 0;
                   });
                 },
@@ -276,6 +279,9 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
                 ),
                 onPressed: () {
                   setState(() {
+                    if (selectedGender != 1) {
+                      selectedAvatar = -1;
+                    }
                     selectedGender = 1;
                   });
                 },
@@ -303,43 +309,60 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
   }
 
   Widget _buildAvatarGrid() {
+    if (selectedGender == -1) return const SizedBox.shrink();
+
+    final List<String> genderSpecificImages;
+    final int avatarIndexOffset;
+
+    if (selectedGender == 0) {
+      // Girl avatars (first 4)
+      genderSpecificImages = _images.sublist(0, 4);
+      avatarIndexOffset = 0;
+    } else {
+      // Boy avatars (last 4)
+      genderSpecificImages = _images.sublist(4);
+      avatarIndexOffset = 4;
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 20),
         Align(
           alignment: Alignment.centerRight,
-          child: Text(
+          child: const Text(
             'ٳختار صورة',
             style: AppTextStyles.blackFont,
             textAlign: TextAlign.right,
           ),
         ),
+        const SizedBox(height: 10),
         GridView.count(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: 4,
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
-          children: List.generate(_images.length, (index) {
+          children: List.generate(genderSpecificImages.length, (index) {
+            final globalIndex = index + avatarIndexOffset;
             return GestureDetector(
               onTap: () {
                 setState(() {
-                  selectedAvatar = index;
+                  selectedAvatar = globalIndex;
                 });
               },
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selectedAvatar == index
+                    color: selectedAvatar == globalIndex
                         ? Colors.black
                         : Colors.grey.shade400,
-                    width: selectedAvatar == index ? 4 : 1,
+                    width: selectedAvatar == globalIndex ? 4 : 1,
                   ),
                 ),
                 child: ClipOval(
-                  child: Image.asset(_images[index], fit: BoxFit.cover),
+                  child: Image.asset(genderSpecificImages[index], fit: BoxFit.cover),
                 ),
               ),
             );
