@@ -9,14 +9,18 @@ import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/data/datasources/child_local_datasource.dart';
 import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/datasources/local_data_source.dart';
+import 'package:horofy/horofy/data/datasources/progress_local_datasource.dart';
 import 'package:horofy/horofy/data/repositories/child_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/letters_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/onboarding_repository_impl.dart';
+import 'package:horofy/horofy/data/repositories/progress_repository_impl.dart';
 import 'package:horofy/horofy/domain/usecases/add_child_usecase.dart';
 import 'package:horofy/horofy/domain/usecases/letters_usecase.dart';
+import 'package:horofy/horofy/domain/usecases/progress_usecases.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/letters_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,6 +44,24 @@ void main() async {
               getChildrenUseCase: GetChildrenUseCase(repository),
               deleteChildUseCase: DeleteChildUseCase(repository),
               updateChildUseCase: UpdateChildUseCase(repository),
+            );
+          },
+        ),
+
+        /// Progress Feature
+        BlocProvider(
+          create: (context) {
+            final dataSource = ProgressLocalDataSourceImpl();
+            final repository = ProgressRepositoryImpl(dataSource);
+            return ProgressCubit(
+              saveProgressUseCase: SaveProgressUseCase(repository),
+              getProgressForChildUseCase: GetProgressForChildUseCase(
+                repository,
+              ),
+              getProgressForLetterUseCase: GetProgressForLetterUseCase(
+                repository,
+              ),
+              updateProgressUseCase: UpdateProgressUseCase(repository),
             );
           },
         ),

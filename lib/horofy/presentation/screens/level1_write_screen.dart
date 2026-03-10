@@ -2,7 +2,9 @@ import 'dart:math';
 import 'dart:ui' as ui;
 import 'dart:typed_data';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
 
 // ============================================================
 //  LetterPixelMap  —  خريطة بكسلات الحرف في الميموري
@@ -15,7 +17,10 @@ class LetterPixelMap {
   LetterPixelMap._(this._alpha, this.width, this.height);
 
   static Future<LetterPixelMap> build(
-      String letter, double canvasWidth, double canvasHeight) async {
+    String letter,
+    double canvasWidth,
+    double canvasHeight,
+  ) async {
     final w = canvasWidth.toInt();
     final h = canvasHeight.toInt();
 
@@ -99,7 +104,13 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   bool _completed = false;
 
   String get _currentLetter =>
-      ModalRoute.of(context)?.settings.arguments as String? ?? '';
+      (ModalRoute.of(context)?.settings.arguments as Map?)?['letter'] as String? ?? '';
+
+  int get _childId =>
+      (ModalRoute.of(context)?.settings.arguments as Map?)?['childId'] ?? 0;
+
+  int get _letterId =>
+      (ModalRoute.of(context)?.settings.arguments as Map?)?['letterId'] ?? 0;
 
   static const double _brushRadius = 28;
   static const double _requiredCoverage = 0.85;
@@ -133,7 +144,8 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    final letter = ModalRoute.of(context)?.settings.arguments as String? ?? '';
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    final letter = args?['letter'] as String? ?? '';
     if (letter.isNotEmpty && letter != _cachedLetter) {
       _schedulePixelMapBuild(letter);
     }
@@ -147,8 +159,7 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
 
   Future<void> _buildPixelMap(String letter) async {
     if (_canvasWidth == 0 || _canvasHeight == 0) return;
-    final map =
-        await LetterPixelMap.build(letter, _canvasWidth, _canvasHeight);
+    final map = await LetterPixelMap.build(letter, _canvasWidth, _canvasHeight);
     if (!mounted) return;
     setState(() {
       _pixelMap = map;
@@ -212,6 +223,15 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   void _onCompleted() {
     if (_completed) return;
     setState(() => _completed = true);
+
+    // Update progress
+    if (_childId != 0 && _letterId != 0) {
+      context.read<ProgressCubit>().markAsWritten(
+        _childId,
+        'level1',
+        _letterId,
+      );
+    }
 
     final rnd = Random();
     for (int i = 0; i < 60; i++) {
@@ -504,6 +524,5 @@ class LetterTracePainter extends CustomPainter {
 
   @override
   bool shouldRepaint(LetterTracePainter old) =>
-      old.touchPoints.length != touchPoints.length ||
-      old.letter != letter;
+      old.touchPoints.length != touchPoints.length || old.letter != letter;
 }

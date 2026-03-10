@@ -110,7 +110,11 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
               child: CustomButton(
                 text: displayName,
                 onPressed: () {
-                  Navigator.pushNamed(context, level1ListenScreen);
+                  Navigator.pushNamed(
+                    context,
+                    level1ListenScreen,
+                    arguments: {'childId': child?.id},
+                  );
                 },
               ),
             ),
