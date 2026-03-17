@@ -21,6 +21,10 @@ import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/letters_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
+import 'package:horofy/horofy/data/datasources/mad_letters_datasource.dart';
+import 'package:horofy/horofy/data/repositories/mad_letters_repository_impl.dart';
+import 'package:horofy/horofy/domain/usecases/mad_letters_usecase.dart';
+import 'package:horofy/horofy/presentation/cubit/level2_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -76,6 +80,29 @@ void main() async {
             final getLetters = GetLettersUseCase(repository);
 
             return LettersCubit(getLetters)..loadLetters();
+          },
+        ),
+
+        /// Mad Letters Feature
+        BlocProvider(
+          create: (context) {
+            final dataSource = MadLettersDataSourceImpl();
+            final repository = MadLettersRepositoryImpl(dataSource);
+            final progressRepo = ProgressRepositoryImpl(
+              ProgressLocalDataSourceImpl(),
+            );
+
+            return Level2Cubit(
+              getMadLettersUseCase: GetMadLettersUseCase(repository),
+              saveProgressUseCase: SaveProgressUseCase(progressRepo),
+              getProgressForChildUseCase: GetProgressForChildUseCase(
+                progressRepo,
+              ),
+              getProgressForLetterUseCase: GetProgressForLetterUseCase(
+                progressRepo,
+              ),
+              updateProgressUseCase: UpdateProgressUseCase(progressRepo),
+            )..loadMadLetters();
           },
         ),
       ],

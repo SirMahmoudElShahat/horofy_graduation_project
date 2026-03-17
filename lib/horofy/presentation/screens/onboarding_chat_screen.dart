@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/font_style.dart';
-import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/message_bubble.dart.dart';
 
 class OnboardingChatScreen extends StatefulWidget {

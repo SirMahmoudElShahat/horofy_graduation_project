@@ -6,6 +6,7 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/domain/entities/child_entity.dart';
 
 class ChildLevelsScreen extends StatefulWidget {
@@ -71,7 +72,7 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
     Get.snackbar(
       title,
       message,
-      snackPosition: SnackPosition.TOP,
+      snackPosition: SnackPosition.BOTTOM,
       backgroundColor: isError
           ? Colors.redAccent.withOpacity(0.9)
           : Colors.green.withOpacity(0.9),
@@ -85,42 +86,69 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final displayName = levelEnToArabic(currentLevelEn);
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, state) {
+        if (state is ChildLoaded && child != null) {
+          try {
+            final updatedChild = state.children.firstWhere(
+              (c) => c.id == child!.id,
+            );
+            currentLevelEn = updatedChild.level;
+          } catch (_) {}
+        }
 
-    return Container(
-      decoration: BoxDecoration(
-        image: DecorationImage(
-          image: AssetImage("assets/images/child_background.jpg"),
-          fit: BoxFit.cover,
-        ),
-      ),
-      child: Stack(
-        children: [
-          Positioned(
-            top: 25,
-            right: 10,
-            child: TextButton(
-              onPressed: _skipLevel,
-              child: const Text("تخطى", style: AppTextStyles.greyFont),
+        final displayName = levelEnToArabic(currentLevelEn);
+
+        return Container(
+          decoration: BoxDecoration(
+            image: DecorationImage(
+              image: AssetImage("assets/images/child_background.jpg"),
+              fit: BoxFit.cover,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 250),
-            child: Center(
-              child: CustomButton(
-                text: displayName,
-                onPressed: () {
-                  Navigator.pushNamed(
-                    context,
-                    level1ListenScreen,
-                    arguments: {'childId': child?.id},
-                  );
-                },
+          child: Stack(
+            children: [
+              Positioned(
+                top: 25,
+                right: 10,
+                child: TextButton(
+                  onPressed: _skipLevel,
+                  child: const Text("تخطى", style: AppTextStyles.greyFont),
+                ),
               ),
-            ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 250),
+                child: Center(
+                  child: CustomButton(
+                    text: displayName,
+                    onPressed: () {
+                      switch (currentLevelEn) {
+                        case 'level1':
+                          Navigator.pushNamed(
+                            context,
+                            level1ListenScreen,
+                            arguments: {'childId': child?.id},
+                          );
+                          break;
+                        case 'level2':
+                          Navigator.pushNamed(
+                            context,
+                            level2Screen,
+                            arguments: {'childId': child?.id},
+                          );
+                          break;
+                        // Add more cases for other levels as needed
+                        default:
+                          _showSnackBar(context, "خطأ", "مستوى غير معروف");
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

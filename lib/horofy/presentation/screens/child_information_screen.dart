@@ -199,7 +199,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
         ),
         const SizedBox(height: 10),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Container(
               decoration: BoxDecoration(
