@@ -17,4 +17,5 @@ const String exercisesResultScreen = '/login/main_home/child_home/levels/exercis
 const String level1ListenScreen = '/login/main_home/child_home/levels/level1_listen';
 const String level1WriteScreen = '/login/main_home/child_home/levels/level1_write';
 const String level2Screen = '/login/main_home/child_home/levels/level2';
+const String level3Screen = '/login/main_home/child_home/levels/level3';
 

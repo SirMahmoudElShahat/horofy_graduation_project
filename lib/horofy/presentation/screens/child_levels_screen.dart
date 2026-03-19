@@ -137,6 +137,13 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
                             arguments: {'childId': child?.id},
                           );
                           break;
+                        case 'level3':
+                          Navigator.pushNamed(
+                            context,
+                            level3Screen,
+                            arguments: {'childId': child?.id},
+                          );
+                          break;
                         // Add more cases for other levels as needed
                         default:
                           _showSnackBar(context, "خطأ", "مستوى غير معروف");

@@ -10,6 +10,7 @@ import 'package:horofy/horofy/presentation/screens/exercises_result_screen.dart'
 import 'package:horofy/horofy/presentation/screens/level1_listen_screen.dart';
 import 'package:horofy/horofy/presentation/screens/level1_write_screen.dart';
 import 'package:horofy/horofy/presentation/screens/level2_screen.dart';
+import 'package:horofy/horofy/presentation/screens/level3_screen.dart';
 import 'package:horofy/horofy/presentation/screens/onboarding_chat_screen.dart';
 import 'package:horofy/horofy/presentation/screens/login_screen.dart';
 import 'package:horofy/horofy/presentation/screens/main_home_screen.dart';
@@ -122,6 +123,12 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => OfflineWrapper(child: const Level2Screen()),
+        );
+
+      case level3Screen:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => OfflineWrapper(child: const Level3Screen()),
         );
 
       default:
