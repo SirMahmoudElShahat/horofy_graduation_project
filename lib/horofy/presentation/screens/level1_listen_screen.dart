@@ -6,7 +6,6 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/models/letter_model.dart';
-import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/progress_state.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';

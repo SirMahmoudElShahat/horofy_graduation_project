@@ -281,7 +281,7 @@ class _Level2ScreenState extends State<Level2Screen> {
         return _buildWordFull(state, letter);
       case Level2Step.practiceSpelling:
         return _buildPracticeSpelling(state, letter);
-      case Level2Step.practiceWord: // ← جديد
+      case Level2Step.practiceWord: 
         return _buildPracticeWord(state, letter);
       case Level2Step.wordImage:
         return _buildWordImage(letter);
