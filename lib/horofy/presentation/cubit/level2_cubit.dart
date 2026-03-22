@@ -19,13 +19,13 @@ class Level2Cubit extends Cubit<Level2State> {
     required this.updateProgressUseCase,
   }) : super(Level2Initial());
 
-  // ── تحميل البيانات ────────────────────────────────────────
+  // ── Load Data ────────────────────────────────────────
   void loadMadLetters() {
     final letters = getMadLettersUseCase();
     emit(Level2Loaded(madLetters: letters, step: Level2Step.letterImage));
   }
 
-  // ── التقدم للخطوة التالية ─────────────────────────────────
+  // ── Next Step ─────────────────────────────────
   void nextStep() {
     final s = state;
     if (s is! Level2Loaded) return;
@@ -51,19 +51,19 @@ class Level2Cubit extends Cubit<Level2State> {
     }
   }
 
-  // ── تحديث حالة الميكروفون ─────────────────────────────────
+  // ── Update Mic Status ─────────────────────────────────
   void setListening(bool value) {
     final s = state;
     if (s is! Level2Loaded) return;
     emit(s.copyWith(isListening: value));
   }
 
-  // ── نتيجة التسجيل الصوتي ─────────────────────────────────
+  // ── Speech Result ─────────────────────────────────
   void onSpeechResult({required bool isCorrect, required String spokenText}) {
     final s = state;
     if (s is! Level2Loaded) return;
 
-    // لو spokenText فاضي → reset بس من غير message
+    // If spokenText is empty → reset without message
     if (spokenText.isEmpty) {
       emit(s.copyWith(isCorrect: false, isListening: false, statusMessage: ''));
       return;
@@ -80,7 +80,7 @@ class Level2Cubit extends Cubit<Level2State> {
     );
   }
 
-  // ── حفظ البروجرس وتقدم للحرف التالي ─────────────────────
+  // ── Save Progress & Next Letter ─────────────────────
   Future<void> saveProgressAndNext({required int childId}) async {
     final s = state;
     if (s is! Level2Loaded) return;
@@ -90,7 +90,7 @@ class Level2Cubit extends Cubit<Level2State> {
 
     await _saveProgress(childId: childId, letterId: letter.id);
 
-    if (s.isLastLetter) return; // الـ screen هيتعامل مع النهاية
+    if (s.isLastLetter) return; // The screen will handle the end
 
     emit(
       s.copyWith(
@@ -103,7 +103,7 @@ class Level2Cubit extends Cubit<Level2State> {
     );
   }
 
-  // ── تحميل تقدم الطفل للمستوى الحالي ─────────────────────
+  // ── Load Child Progress for Current Level ─────────────────────
   Future<void> loadProgress(int childId) async {
     final s = state;
     if (s is! Level2Loaded) return;
@@ -133,7 +133,7 @@ class Level2Cubit extends Cubit<Level2State> {
     }
   }
 
-  // ── حفظ progress في الـ DB ────────────────────────────────
+  // ── Save Progress in DB ────────────────────────────────
   Future<void> _saveProgress({
     required int childId,
     required int letterId,

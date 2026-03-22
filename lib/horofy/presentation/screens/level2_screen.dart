@@ -109,7 +109,7 @@ class _Level2ScreenState extends State<Level2Screen> {
   Future<void> _startListening(MadLetter letter) async {
     if (_stt.isListening) return;
 
-    // امسح النتيجة القديمة عشان الطفل يحاول تاني بدون confusion
+    // Clear the old result so the child can try again without confusion
     context.read<Level2Cubit>().onSpeechResult(
       isCorrect: false,
       spokenText: '',
@@ -144,7 +144,7 @@ class _Level2ScreenState extends State<Level2Screen> {
     bool isCorrect;
 
     if (currentStep == Level2Step.practiceSpelling) {
-      // يتحقق من حرف المد بس
+      // Verifies only the mad letter
       final madWordLetter = letter.wordLetters.firstWhere(
         (wl) => wl.isMadLetter,
       );
@@ -152,7 +152,7 @@ class _Level2ScreenState extends State<Level2Screen> {
       final letterAr = normalizeArabic(letter.letterAr);
       isCorrect = spoken.contains(correct) || spoken.contains(letterAr);
     } else {
-      // practiceWord — يتحقق من الكلمة كاملة
+      // practiceWord — verifies the full word
       final correctWord = normalizeArabic(letter.wordText);
       isCorrect = spoken.contains(correctWord);
     }
@@ -178,7 +178,7 @@ class _Level2ScreenState extends State<Level2Screen> {
 
       final isLast = state.isLastLetter;
 
-      // لو ده آخر حرف، نحدث مستوى الطفل لـ level3
+      // If this is the last letter, update child level to level3
       if (isLast && _childId != 0) {
         await context.read<ChildCubit>().updateLevel(_childId, 'level3');
       }
@@ -233,10 +233,10 @@ class _Level2ScreenState extends State<Level2Screen> {
             body: SafeArea(
               child: Stack(
                 children: [
-                  // ── المحتوى ─────────────────────────────────
+                  // ── Content ─────────────────────────────────
                   _buildStepContent(state, letter),
 
-                  // ── زر Next ─────────────────────────────────
+                  // ── Next Button ─────────────────────────────────
                   _buildNextButton(state, letter),
                 ],
               ),
@@ -289,14 +289,14 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 1 — صورة حرف المد
+  //  STEP 1 — Mad Letter Image
   // ══════════════════════════════════════════════════════════
   Widget _buildLetterImage(MadLetter letter) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // اسم الحرف
+          // Letter name
           Text(
             letter.letterAr,
             style: AppTextStyles.greyFont.copyWith(
@@ -305,7 +305,7 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 16),
-          // صورة الحرف
+          // Letter image
           Image.asset(letter.image, height: 250, fit: BoxFit.contain),
         ],
       ),
@@ -313,7 +313,7 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 2 — الكلمة مفصلة
+  //  STEP 2 — Spelled Word
   // ══════════════════════════════════════════════════════════
   Widget _buildWordSpelled(MadLetter letter) {
     return Center(
@@ -330,7 +330,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            // RTL → نعكس الترتيب عشان العربي يبدأ من اليمين
+            // RTL → reverse the order so Arabic starts from the right
             children: letter.wordLetters.reversed
                 .map((wl) => _buildSpelledLetterCard(wl))
                 .toList(),
@@ -346,7 +346,7 @@ class _Level2ScreenState extends State<Level2Screen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // صورة الحرف
+          // Letter image
           Container(
             width: 80,
             height: 80,
@@ -368,18 +368,18 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 6),
-          // الحرف مكتوب
+          // Written letter
           Text(
             wl.letter,
             style: TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Cairo-ExtraBold',
               fontSize: 20,
               fontWeight: FontWeight.bold,
               color: wl.isMadLetter ? AppColors.primary : Colors.black87,
             ),
           ),
           const SizedBox(height: 6),
-          // زرار الصوت
+          // Sound button
           ExercisesButton(
             buttonIcon: Icons.headphones_rounded,
             onPressed: () => _playAsset(wl.sound),
@@ -390,10 +390,10 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 3 — الكلمة على بعضها + TTS
+  //  STEP 3 — Full Word + TTS
   // ══════════════════════════════════════════════════════════
   Widget _buildWordFull(Level2Loaded state, MadLetter letter) {
-    // normalize بدون diacritics للمقارنة بس
+    // normalize without diacritics for comparison only
     String stripDiacritics(String s) =>
         s.replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '');
 
@@ -417,12 +417,12 @@ class _Level2ScreenState extends State<Level2Screen> {
                 return TextSpan(
                   text: char,
                   style: TextStyle(
-                    fontFamily: 'Cairo',
+                    fontFamily: 'Cairo-ExtraBold',
                     fontSize: 72,
                     fontWeight: FontWeight.bold,
                     color: isMadLetter
                         ? Colors
-                              .orange // ← لون مختلف لحرف المد
+                              .orange // ← different color for the mad letter
                         : const Color(0xFF774019),
                   ),
                 );
@@ -440,7 +440,7 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 4 — تسجيل حرف المد
+  //  STEP 4 — Practice Spelling (Mad Letter)
   // ══════════════════════════════════════════════════════════
   Widget _buildPracticeSpelling(Level2Loaded state, MadLetter letter) {
     return Center(
@@ -456,7 +456,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           ),
           const SizedBox(height: 24),
 
-          // الحروف مع المايك تحت حرف المد
+          // Letters with mic under the mad letter
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: letter.wordLetters.reversed.map((wl) {
@@ -465,7 +465,7 @@ class _Level2ScreenState extends State<Level2Screen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // صورة
+                    // Image
                     Container(
                       width: 80,
                       height: 80,
@@ -487,11 +487,11 @@ class _Level2ScreenState extends State<Level2Screen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // الحرف
+                    // Letter
                     Text(
                       wl.letter,
                       style: TextStyle(
-                        fontFamily: 'Cairo',
+                        fontFamily: 'Cairo-ExtraBold',
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                         color: wl.isMadLetter
@@ -500,7 +500,7 @@ class _Level2ScreenState extends State<Level2Screen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // مايك تحت حرف المد فقط
+                    // Mic under mad letter only
                     if (wl.isMadLetter)
                       _buildMicButton(state, letter)
                     else
@@ -526,7 +526,7 @@ class _Level2ScreenState extends State<Level2Screen> {
               child: Text(
                 state.statusMessage,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Cairo-ExtraBold',
                   fontSize: 16,
                   color: state.isCorrect ? Colors.green : Colors.red,
                 ),
@@ -561,7 +561,7 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 5 — تسجيل الكلمة كاملة
+  //  STEP 5 — Practice Full Word
   // ══════════════════════════════════════════════════════════
   Widget _buildPracticeWord(Level2Loaded state, MadLetter letter) {
     return Center(
@@ -577,11 +577,11 @@ class _Level2ScreenState extends State<Level2Screen> {
           ),
           const SizedBox(height: 24),
 
-          // الكلمة مكتوبة كبيرة
+          // Large written word
           Text(
             letter.wordText,
             style: const TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Cairo-ExtraBold',
               fontSize: 64,
               fontWeight: FontWeight.bold,
               color: Color(0xFF774019),
@@ -589,7 +589,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           ),
           const SizedBox(height: 32),
 
-          // زرار المايك
+          // Mic button
           _buildMicButton(state, letter),
           const SizedBox(height: 24),
 
@@ -606,7 +606,7 @@ class _Level2ScreenState extends State<Level2Screen> {
               child: Text(
                 state.statusMessage,
                 style: TextStyle(
-                  fontFamily: 'Cairo',
+                  fontFamily: 'Cairo-ExtraBold',
                   fontSize: 16,
                   color: state.isCorrect ? Colors.green : Colors.red,
                 ),
@@ -618,7 +618,7 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 6 — صورة الكلمة
+  //  STEP 6 — Word Image
   // ══════════════════════════════════════════════════════════
   Widget _buildWordImage(MadLetter letter) {
     return Center(
@@ -628,7 +628,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           Text(
             letter.wordText,
             style: const TextStyle(
-              fontFamily: 'Cairo',
+              fontFamily: 'Cairo-ExtraBold',
               fontSize: 32,
               fontWeight: FontWeight.bold,
               color: Color(0xFF774019),
@@ -639,7 +639,7 @@ class _Level2ScreenState extends State<Level2Screen> {
             letter.wordImage,
             height: 220,
             fit: BoxFit.contain,
-            // لو الصورة مش موجودة بعد → placeholder
+            // Fallback placeholder if image is missing
             errorBuilder: (_, __, ___) => Container(
               width: 220,
               height: 220,

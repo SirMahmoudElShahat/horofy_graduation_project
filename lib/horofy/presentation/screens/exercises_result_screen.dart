@@ -96,7 +96,7 @@ class _ExercisesResultScreenState extends State<ExercisesResultScreen>
                         Text(
                           '🎉 !أحسنت',
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: 'Cairo-ExtraBold',
                             fontSize: 22,
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

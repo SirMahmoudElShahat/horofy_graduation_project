@@ -7,7 +7,7 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
 
 // ============================================================
-//  LetterPixelMap  —  خريطة بكسلات الحرف في الميموري
+//  LetterPixelMap  —  Letter pixel map in memory
 // ============================================================
 class LetterPixelMap {
   final Uint8List _alpha;
@@ -30,7 +30,7 @@ class LetterPixelMap {
       Rect.fromLTWH(0, 0, canvasWidth, canvasHeight),
     );
 
-    // نفس الـ fontSize المستخدم في الـ painter
+    // Same fontSize used in painter
     final fontSize = canvasWidth * 0.65;
 
     final tp = TextPainter(
@@ -40,14 +40,14 @@ class LetterPixelMap {
           fontSize: fontSize,
           color: Colors.black,
           fontWeight: FontWeight.bold,
-          height: 1.4, // نفس الـ height المستخدم في الـ painter
+          height: 1.4, // Same height used in painter
         ),
       ),
       textDirection: TextDirection.rtl,
     );
     tp.layout(maxWidth: canvasWidth);
 
-    // نفس حساب الـ offset المستخدم في الـ painter
+    // Same offset calculation used in painter
     final offsetX = (canvasWidth - tp.width) / 2;
     final offsetY = (canvasHeight - tp.height) / 2;
     tp.paint(canvas, Offset(offsetX, offsetY));
@@ -104,7 +104,9 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   bool _completed = false;
 
   String get _currentLetter =>
-      (ModalRoute.of(context)?.settings.arguments as Map?)?['letter'] as String? ?? '';
+      (ModalRoute.of(context)?.settings.arguments as Map?)?['letter']
+          as String? ??
+      '';
 
   int get _childId =>
       (ModalRoute.of(context)?.settings.arguments as Map?)?['childId'] ?? 0;
@@ -123,7 +125,7 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   final Set<int> _coveredPixels = {};
   String _cachedLetter = '';
 
-  // الـ canvas له عرض وارتفاع منفصلين عشان الحروف اللي بتتمد فوق/تحت
+  // Separate width and height for canvas for letters extending up/down
   double _canvasWidth = 0;
   double _canvasHeight = 0;
 
@@ -269,12 +271,12 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
 
-    // تحديد حجم مربع الرسم بناءً على أصغر بعد للشاشة لضمان ظهور الحرف بالكامل وبحجم مناسب
+    // Set drawing box size based on shortest screen dimension to ensure full letter visibility
     final double boxSize = (screenSize.shortestSide * 0.75).clamp(200.0, 350.0);
     final canvasWidth = boxSize;
     final canvasHeight = boxSize;
 
-    // لو الأبعاد اتغيرت نعيد البناء
+    // Rebuild if dimensions change
     if (canvasWidth != _canvasWidth || canvasHeight != _canvasHeight) {
       _canvasWidth = canvasWidth;
       _canvasHeight = canvasHeight;
@@ -310,7 +312,7 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
                           'مشّي إصبعك على الحرف 👆',
                           textAlign: TextAlign.center,
                           style: TextStyle(
-                            fontFamily: 'Cairo',
+                            fontFamily: 'Cairo-ExtraBold',
                             fontSize: 18,
                             color: Colors.black45,
                           ),
@@ -328,7 +330,7 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
                   ),
                 ),
 
-                // ── الحرف ───────────────────────────────────────
+                // ── Letter ───────────────────────────────────────
                 Expanded(
                   child: Align(
                     alignment: Alignment.bottomCenter,
@@ -471,7 +473,7 @@ class LetterTracePainter extends CustomPainter {
 
   TextPainter _buildTextPainter(Size size, Color color) {
     final refWidth = canvasWidth ?? size.width;
-    // نفس الـ fontSize المستخدم في LetterPixelMap.build
+    // Same fontSize used in LetterPixelMap.build
     final fontSize = refWidth * 0.65;
 
     final tp = TextPainter(
@@ -481,7 +483,7 @@ class LetterTracePainter extends CustomPainter {
           fontSize: fontSize,
           color: color,
           fontWeight: FontWeight.bold,
-          height: 1.4, // نزيد الـ line height عشان الحروف اللي بتتمد تحت زي ج
+          height: 1.4, // Increase line height for letters extending downwards like ج
         ),
       ),
       textDirection: TextDirection.rtl,
@@ -495,7 +497,7 @@ class LetterTracePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // الحرف الباهت (الـ ghost)
+    // Ghost letter (faded)
     final ghost = _buildTextPainter(size, traceColor.withOpacity(0.15));
     ghost.paint(canvas, _letterOffset(ghost, size));
 
@@ -513,7 +515,7 @@ class LetterTracePainter extends CustomPainter {
       canvas.drawCircle(point, brushRadius, tracePaint);
     }
 
-    // mask بشكل الحرف — اللون بيظهر بس جوا الحرف
+    // Mask in the shape of the letter — color appears only inside the letter
     final mask = _buildTextPainter(size, Colors.black);
     canvas.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
     mask.paint(canvas, _letterOffset(mask, size));
