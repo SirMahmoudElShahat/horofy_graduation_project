@@ -49,8 +49,8 @@ const _wordImagePath = 'assets/images/level3/play.png';
 //  Steps
 // ══════════════════════════════════════════════════════════
 enum _Level3Step {
-  letters,   // خطوة 1: الحروف واحد واحد
-  record,    // خطوة 2: تسجيل الكلمة
+  letters, // خطوة 1: الحروف واحد واحد
+  record, // خطوة 2: تسجيل الكلمة
   wordImage, // خطوة 3: صورة الكلمة
 }
 
@@ -96,7 +96,8 @@ class _Level3ScreenState extends State<Level3Screen> {
     _speechEnabled = await _stt.initialize(
       onError: (_) => setState(() => _isListening = false),
       onStatus: (s) {
-        if (s == 'notListening' && mounted) setState(() => _isListening = false);
+        if (s == 'notListening' && mounted)
+          setState(() => _isListening = false);
       },
     );
     if (mounted) setState(() {});
@@ -191,16 +192,16 @@ class _Level3ScreenState extends State<Level3Screen> {
   }
 
   void _onResult(SpeechRecognitionResult result) {
-    String spoken = _normalize(result.recognizedWords)
-        .replaceAll('حرف', '')
-        .replaceAll('الحرف', '')
-        .trim();
+    String spoken = _normalize(
+      result.recognizedWords,
+    ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
 
     if (spoken.isEmpty) return;
 
     // نقارن بكلمة "لعب" بعد تنميط
     final correct = _normalize(_wordText); // لعب
-    final isCorrect = spoken.contains(correct) ||
+    final isCorrect =
+        spoken.contains(correct) ||
         spoken.contains('لعب') ||
         spoken.contains('لاعب');
 
@@ -331,7 +332,7 @@ class _Level3ScreenState extends State<Level3Screen> {
 
                     // زرار السماعة
                     ExercisesButton(
-                      buttonIcon: Icons.volume_up_rounded,
+                      buttonIcon: Icons.headphones_rounded,
                       onPressed: () => _playAsset(wl.sound),
                     ),
                   ],
@@ -458,11 +459,7 @@ class _Level3ScreenState extends State<Level3Screen> {
                 border: Border.all(color: Colors.grey.shade300),
               ),
               child: const Center(
-                child: Icon(
-                  Icons.image_outlined,
-                  size: 80,
-                  color: Colors.grey,
-                ),
+                child: Icon(Icons.image_outlined, size: 80, color: Colors.grey),
               ),
             ),
           ),

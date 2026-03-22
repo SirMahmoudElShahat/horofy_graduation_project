@@ -192,7 +192,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           if (isLast) {
             Navigator.popUntil(context, ModalRoute.withName(childHomeScreen));
           } else {
-            navigator.pop(); 
+            navigator.pop();
           }
         },
       );
@@ -281,7 +281,7 @@ class _Level2ScreenState extends State<Level2Screen> {
         return _buildWordFull(state, letter);
       case Level2Step.practiceSpelling:
         return _buildPracticeSpelling(state, letter);
-      case Level2Step.practiceWord: 
+      case Level2Step.practiceWord:
         return _buildPracticeWord(state, letter);
       case Level2Step.wordImage:
         return _buildWordImage(letter);
@@ -381,7 +381,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           const SizedBox(height: 6),
           // زرار الصوت
           ExercisesButton(
-            buttonIcon: Icons.volume_up_rounded,
+            buttonIcon: Icons.headphones_rounded,
             onPressed: () => _playAsset(wl.sound),
           ),
         ],
@@ -431,7 +431,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           ),
           const SizedBox(height: 32),
           ExercisesButton(
-            buttonIcon: Icons.volume_up_rounded,
+            buttonIcon: Icons.headphones_rounded,
             onPressed: () => _speakWord(letter.wordText),
           ),
         ],

@@ -18,4 +18,9 @@ const String level1ListenScreen = '/login/main_home/child_home/levels/level1_lis
 const String level1WriteScreen = '/login/main_home/child_home/levels/level1_write';
 const String level2Screen = '/login/main_home/child_home/levels/level2';
 const String level3Screen = '/login/main_home/child_home/levels/level3';
+const String level4Screen = '/login/main_home/child_home/levels/level4';
+const String level5Screen = '/login/main_home/child_home/levels/level5';
+const String level6Screen = '/login/main_home/child_home/levels/level6';
+const String level7Screen = '/login/main_home/child_home/levels/level7';
+
 

@@ -270,7 +270,7 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
                         ? (_speechToText.isListening
                               ? Icons.stop_rounded
                               : Icons.mic)
-                        : Icons.volume_up_rounded,
+                        : Icons.headphones_rounded,
                     onPressed: _isPracticeMode
                         ? (_speechToText.isListening
                               ? _stopListening
