@@ -200,7 +200,7 @@ class _Level4ScreenState extends State<Level4Screen>
   // Same pattern as Level1ListenScreen._onSpeechResult — no Future.delayed,
   // navigate immediately when correct so there is no async gap
   void _onSpeechResult(SpeechRecognitionResult result) {
-    // تجنب تنفيذ الكود إذا تم تدمير الويدجت أو إذا كانت الإجابة صحيحة مسبقاً لمنع التكرار
+    // Avoid execution if the widget is destroyed or if the answer is already correct to prevent duplicates
     if (!mounted || _isCorrect) return;
 
     String spoken = _normalize(
@@ -226,7 +226,7 @@ class _Level4ScreenState extends State<Level4Screen>
     });
 
     if (isCorrect) {
-      _stt.stop(); // إيقاف الاستماع فوراً لمنع أي نتائج متأخرة
+      _stt.stop(); // Stop listening immediately to prevent any late results
       setState(() => _isListening = false);
       // Navigate immediately — no Future.delayed — same as Level1
       _showSnackBar('أحسنت', 'إجابة صحيحة!', isError: false);
@@ -430,7 +430,7 @@ class _Level4ScreenState extends State<Level4Screen>
                   child: Text(
                     _statusMessage,
                     style: TextStyle(
-                      fontFamily: 'Cairo',
+                      fontFamily: 'Cairo-ExtraBold',
                       fontSize: 16,
                       color: _isCorrect ? Colors.green : Colors.red,
                     ),

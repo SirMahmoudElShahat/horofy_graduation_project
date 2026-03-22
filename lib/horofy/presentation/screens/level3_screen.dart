@@ -10,7 +10,7 @@ import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
 // ══════════════════════════════════════════════════════════
-//  بيانات الحروف — كلمة "لعب"
+//  Letter data — word "لعب"
 // ══════════════════════════════════════════════════════════
 class _LetterData {
   final String letter;
@@ -49,9 +49,9 @@ const _wordImagePath = 'assets/images/level3/play.png';
 //  Steps
 // ══════════════════════════════════════════════════════════
 enum _Level3Step {
-  letters, // خطوة 1: الحروف واحد واحد
-  record, // خطوة 2: تسجيل الكلمة
-  wordImage, // خطوة 3: صورة الكلمة
+  letters, // step 1: letters one by one
+  record, // step 2: record word
+  wordImage, // step 3: word image
 }
 
 // ══════════════════════════════════════════════════════════
@@ -70,7 +70,7 @@ class _Level3ScreenState extends State<Level3Screen> {
 
   _Level3Step _step = _Level3Step.letters;
 
-  // خطوة التسجيل
+  // Record step
   bool _speechEnabled = false;
   bool _isListening = false;
   bool _isCorrect = false;
@@ -151,7 +151,7 @@ class _Level3ScreenState extends State<Level3Screen> {
   }
 
   Future<void> _finishLevel() async {
-    // رفع المستوى للـ level4
+    // Upgrade to level4
     if (_childId != 0) {
       await context.read<ChildCubit>().updateLevel(_childId, 'level4');
     }
@@ -163,7 +163,7 @@ class _Level3ScreenState extends State<Level3Screen> {
       context,
       exercisesResultScreen,
       arguments: () {
-        // نرجع لصفحة الـ childHomeScreen وننظف الـ stack
+        // Return to childHomeScreen and clear stack
         navigator.popUntil(ModalRoute.withName(childLevelsScreen));
       },
     );
@@ -198,7 +198,7 @@ class _Level3ScreenState extends State<Level3Screen> {
 
     if (spoken.isEmpty) return;
 
-    // نقارن بكلمة "لعب" بعد تنميط
+    // Compare with the word "لعب" after normalization
     final correct = _normalize(_wordText); // لعب
     final isCorrect =
         spoken.contains(correct) ||
@@ -222,10 +222,10 @@ class _Level3ScreenState extends State<Level3Screen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // ── المحتوى ──────────────────────────────────
+            // ── Content ──────────────────────────────────
             _buildStepContent(),
 
-            // ── زرار Next ─────────────────────────────────
+            // ── Next Button ─────────────────────────────────
             _buildNextButton(),
           ],
         ),
@@ -235,7 +235,7 @@ class _Level3ScreenState extends State<Level3Screen> {
 
   // ── Next button ──────────────────────────────────────────
   Widget _buildNextButton() {
-    // نخبي الزرار لو في خطوة التسجيل والإجابة غلط
+    // Hide the button during record step if answer is wrong
     final hide = _step == _Level3Step.record && !_isCorrect;
 
     return Positioned(
@@ -268,7 +268,7 @@ class _Level3ScreenState extends State<Level3Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 1 — الحروف واحد واحد
+  //  STEP 1 — Letters one by one
   // ══════════════════════════════════════════════════════════
   Widget _buildLettersStep() {
     return Center(
@@ -284,7 +284,7 @@ class _Level3ScreenState extends State<Level3Screen> {
           ),
           const SizedBox(height: 28),
 
-          // التلت حروف جمب بعض بترتيب الكلمة (RTL)
+          // Three letters side by side in RTL order
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: _wordLetters.reversed.map((wl) {
@@ -293,7 +293,7 @@ class _Level3ScreenState extends State<Level3Screen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // صورة الحرف
+                    // Letter image
                     Container(
                       width: 90,
                       height: 90,
@@ -319,7 +319,7 @@ class _Level3ScreenState extends State<Level3Screen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // الحرف مكتوب
+                    // Written letter
                     Text(
                       wl.letter,
                       style: AppTextStyles.blackFont.copyWith(
@@ -330,7 +330,7 @@ class _Level3ScreenState extends State<Level3Screen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // زرار السماعة
+                    // Audio button
                     ExercisesButton(
                       buttonIcon: Icons.headphones_rounded,
                       onPressed: () => _playAsset(wl.sound),
@@ -346,7 +346,7 @@ class _Level3ScreenState extends State<Level3Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 2 — تسجيل الكلمة
+  //  STEP 2 — Record word
   // ══════════════════════════════════════════════════════════
   Widget _buildRecordStep() {
     return Center(
@@ -362,7 +362,7 @@ class _Level3ScreenState extends State<Level3Screen> {
           ),
           const SizedBox(height: 24),
 
-          // الكلمة مكتوبة كبيرة
+          // Large written word
           Text(
             _wordText,
             style: AppTextStyles.blackFont.copyWith(
@@ -373,7 +373,7 @@ class _Level3ScreenState extends State<Level3Screen> {
           ),
           const SizedBox(height: 32),
 
-          // زرار الميكروفون
+          // Mic button
           Stack(
             alignment: Alignment.center,
             children: [
@@ -394,7 +394,7 @@ class _Level3ScreenState extends State<Level3Screen> {
           ),
           const SizedBox(height: 24),
 
-          // رسالة النتيجة
+          // Status message
           if (_statusMessage.isNotEmpty)
             AnimatedOpacity(
               opacity: _statusMessage.isNotEmpty ? 1 : 0,
@@ -430,7 +430,7 @@ class _Level3ScreenState extends State<Level3Screen> {
   }
 
   // ══════════════════════════════════════════════════════════
-  //  STEP 3 — صورة الكلمة
+  //  STEP 3 — Word Image
   // ══════════════════════════════════════════════════════════
   Widget _buildWordImageStep() {
     return Center(
