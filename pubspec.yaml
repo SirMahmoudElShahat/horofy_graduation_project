@@ -84,6 +84,10 @@ flutter:
     - assets/images/letters/
     - assets/images/level2/
     - assets/images/level3/
+    - assets/images/level4/
+    - assets/images/level5/
+    - assets/images/level6/
+    - assets/images/level7/
     - assets/sounds/letter_name/
     - assets/sounds/letter_sound/
 

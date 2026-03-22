@@ -11,6 +11,10 @@ import 'package:horofy/horofy/presentation/screens/level1_listen_screen.dart';
 import 'package:horofy/horofy/presentation/screens/level1_write_screen.dart';
 import 'package:horofy/horofy/presentation/screens/level2_screen.dart';
 import 'package:horofy/horofy/presentation/screens/level3_screen.dart';
+import 'package:horofy/horofy/presentation/screens/level4_screen.dart';
+import 'package:horofy/horofy/presentation/screens/level5_screen.dart';
+import 'package:horofy/horofy/presentation/screens/level6_screen.dart';
+import 'package:horofy/horofy/presentation/screens/level7_screen.dart';
 import 'package:horofy/horofy/presentation/screens/onboarding_chat_screen.dart';
 import 'package:horofy/horofy/presentation/screens/login_screen.dart';
 import 'package:horofy/horofy/presentation/screens/main_home_screen.dart';
@@ -129,6 +133,30 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => OfflineWrapper(child: const Level3Screen()),
+        );
+
+      case level4Screen:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => OfflineWrapper(child: const Level4Screen()),
+        );
+
+      case level5Screen:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => OfflineWrapper(child: const Level5Screen()),
+        );
+
+      case level6Screen:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => OfflineWrapper(child: const Level6Screen()),
+        );
+
+      case level7Screen:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => OfflineWrapper(child: const Level7Screen()),
         );
 
       default:
