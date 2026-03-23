@@ -142,7 +142,7 @@ class _Level7ScreenState extends State<Level7Screen> {
 
   // ── Recognize ─────────────────────────────────────────────
   Future<void> _recognize() async {
-    if (_ink.strokes.isEmpty) return;
+    if (_ink.strokes.isEmpty || _isProcessing || _isCorrectMatch == true) return;
 
     setState(() => _isProcessing = true);
 
@@ -283,7 +283,9 @@ class _Level7ScreenState extends State<Level7Screen> {
                                 buttonIcon: _hasStrokes
                                     ? Icons.send_rounded
                                     : Icons.draw,
-                                onPressed: _hasStrokes ? _recognize : () {},
+                                onPressed: (_hasStrokes && _isCorrectMatch != true)
+                                    ? _recognize
+                                    : () {},
                               ),
                       ],
                     ),
