@@ -1,7 +1,10 @@
 // Screens
 const String splashScreen = '/';
 const String loginScreen = '/login';
-const String signupScreen = '/login/signup';
+const String forgotPasswordScreen = '/login/forgot_password';
+const String resetPasswordScreen = '/reset_password';
+const String verifyOtpScreen = '/verify_otp';
+const String signupScreen = '/signup';
 const String onboardingScreen = '/onboarding';
 const String visitorScreen = '/visitor';
 const String onboardingChatScreen = '/chat';

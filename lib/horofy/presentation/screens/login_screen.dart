@@ -100,6 +100,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               SizedBox(height: 25),
+              // Remember me and forgot password
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -119,9 +120,14 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ],
                   ),
-                  Text(
-                    'هل نسيت الرقم السري؟',
-                    style: AppTextStyles.blackFont.copyWith(fontSize: 14),
+                  GestureDetector(
+                    onTap: () {
+                      Navigator.pushNamed(context, forgotPasswordScreen);
+                    },
+                    child: Text(
+                      'هل نسيت الرقم السري؟',
+                      style: AppTextStyles.blackFont.copyWith(fontSize: 14),
+                    ),
                   ),
                 ],
               ),

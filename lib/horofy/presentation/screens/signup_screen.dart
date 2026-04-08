@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/horofy/presentation/screens/verfiy_otp_screen.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 
 class SignupScreen extends StatefulWidget {
@@ -160,10 +161,15 @@ class _SignupScreenState extends State<SignupScreen> {
                 ],
               ),
               SizedBox(height: 25),
+              // Signup button
               CustomButton(
                 text: 'ﺇرسال',
                 onPressed: () {
-                  Navigator.pushNamed(context, visitorScreen);
+                  Navigator.pushReplacementNamed(
+                    context,
+                    verifyOtpScreen,
+                    arguments: true,
+                  );
                 },
               ),
               SizedBox(height: 40),
