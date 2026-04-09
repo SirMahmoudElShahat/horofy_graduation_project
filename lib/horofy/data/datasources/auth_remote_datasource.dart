@@ -4,10 +4,7 @@ import '../models/user_model.dart';
 
 abstract class AuthRemoteDataSource {
   Future<UserModel> login({required String email, required String password});
-  Future<String> register({
-    required String email,
-    required String password,
-  });
+  Future<String> register({required String email, required String password});
   Future<String> forgotPassword({required String email});
   Future<void> verifyOtp({required String email, required String otp});
   Future<void> resetPassword({
@@ -39,7 +36,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       data: {'email': email, 'password': password},
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return UserModel.fromJson(response.data);
+      return UserModel.fromJson(response.data['data'] as Map<String, dynamic>);
     }
     _handleError(response);
     throw Exception();
@@ -53,11 +50,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final response = await dio.post(
       AppApis.register,
       options: Options(headers: _headers),
-      data: {
-        'email': email,
-        'password': password,
-        'role': 'parent',
-      },
+      data: {'email': email, 'password': password, 'role': 'parent'},
     );
     if (response.statusCode != 200 && response.statusCode != 201) {
       _handleError(response);

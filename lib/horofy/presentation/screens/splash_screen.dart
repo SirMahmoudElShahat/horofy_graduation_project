@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:horofy/core/cache/cache_helper.dart';
+import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
 import 'package:horofy/horofy/presentation/screens/login_screen.dart';
@@ -27,12 +29,32 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (_) => isSeen ? const LoginScreen() : const OnboardingScreen(),
-      ),
-    );
+    if (!isSeen) {
+      // أول مرة فتح التطبيق → Onboarding
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+      );
+    } else {
+      // تحقق من بيانات تسجيل الدخول المحفوظة
+      final rememberMe = CacheHelper.getBool('rememberMe');
+      final accessToken = CacheHelper.getString('accessToken');
+
+      if (rememberMe && accessToken != null && accessToken.isNotEmpty) {
+        // بيانات موجودة → اذهب للشاشة الرئيسية
+        Navigator.pushNamedAndRemoveUntil(
+          context,
+          mainHomeScreen,
+          (route) => false,
+        );
+      } else {
+        // لا توجد بيانات → اذهب لتسجيل الدخول
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+      }
+    }
   }
 
   @override

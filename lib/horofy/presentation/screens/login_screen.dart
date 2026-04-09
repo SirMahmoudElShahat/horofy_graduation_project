@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:horofy/core/cache/cache_helper.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
@@ -37,6 +37,18 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  void _saveLoginData(String userId, String token) {
+    CacheHelper.saveData('rememberMe', true);
+    CacheHelper.saveData('accessToken', token);
+    CacheHelper.saveData('userId', userId);
+  }
+
+  void _clearLoginData() {
+    CacheHelper.saveData('rememberMe', false);
+    CacheHelper.removeData('accessToken');
+    CacheHelper.removeData('userId');
+  }
+
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthCubit, AuthState>(
@@ -47,6 +59,12 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() => _isLoading = false);
 
           if (state is LoginSuccess) {
+            if (_remember) {
+              _saveLoginData(state.user.id, state.user.token ?? '');
+            } else {
+              _clearLoginData();
+            }
+
             Navigator.pushNamedAndRemoveUntil(
               context,
               mainHomeScreen,

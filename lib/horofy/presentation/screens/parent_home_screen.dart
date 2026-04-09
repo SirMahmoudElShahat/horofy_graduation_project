@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:horofy/core/cache/cache_helper.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
@@ -83,8 +84,15 @@ class ParentHomeScreen extends StatelessWidget {
     );
   }
 
-  void _logout(BuildContext context) {
+  void _logout(BuildContext context) async {
+    // مسح البيانات المحفوظة
+    await CacheHelper.saveData('rememberMe', false);
+    await CacheHelper.removeData('accessToken');
+    await CacheHelper.removeData('userId');
+
     _showSnackBar(context, 'تم', 'تم تسجيل الخروج بنجاح', isError: false);
+
+    // مسح الاستاك كله والذهاب لشاشة تسجيل الدخول
     Navigator.of(
       context,
     ).pushNamedAndRemoveUntil(loginScreen, (Route<dynamic> route) => false);
