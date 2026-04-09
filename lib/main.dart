@@ -1,3 +1,4 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -6,17 +7,21 @@ import 'package:horofy/app_router.dart';
 import 'package:horofy/core/cache/cache_helper.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
+import 'package:horofy/horofy/data/datasources/auth_remote_datasource.dart';
 import 'package:horofy/horofy/data/datasources/child_local_datasource.dart';
 import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/datasources/local_data_source.dart';
 import 'package:horofy/horofy/data/datasources/progress_local_datasource.dart';
+import 'package:horofy/horofy/data/repositories/auth_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/child_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/letters_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/onboarding_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/progress_repository_impl.dart';
 import 'package:horofy/horofy/domain/usecases/add_child_usecase.dart';
+import 'package:horofy/horofy/domain/usecases/auth_usecases.dart';
 import 'package:horofy/horofy/domain/usecases/letters_usecase.dart';
 import 'package:horofy/horofy/domain/usecases/progress_usecases.dart';
+import 'package:horofy/horofy/presentation/cubit/auth_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/letters_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
@@ -36,6 +41,20 @@ void main() async {
         BlocProvider(
           create: (context) =>
               OnboardingCubit(OnboardingRepositoryImpl(LocalDataSourceImpl())),
+        ),
+
+        BlocProvider(
+          create: (context) {
+            final dataSource = AuthRemoteDataSourceImpl(dio: Dio());
+            final repository = AuthRepositoryImpl(dataSource);
+            return AuthCubit(
+              loginUseCase: LoginUseCase(repository),
+              registerUseCase: RegisterUseCase(repository),
+              forgotPasswordUseCase: ForgotPasswordUseCase(repository),
+              verifyOtpUseCase: VerifyOtpUseCase(repository),
+              resetPasswordUseCase: ResetPasswordUseCase(repository),
+            );
+          },
         ),
 
         /// children

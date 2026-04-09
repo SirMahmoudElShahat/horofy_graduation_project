@@ -49,17 +49,44 @@ class AppRouter {
         );
 
       case resetPasswordScreen:
-        return MaterialPageRoute(
-          settings: settings,
-          builder: (_) => OfflineWrapper(child: const ResetPasswordScreen()),
-        );
-
-      case verifyOtpScreen:
-        final isFromSignup = settings.arguments as bool? ?? false;
+        final args = settings.arguments as Map<String, String?>?;
+        final email = args?['email'];
+        final otp = args?['otp'];
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => OfflineWrapper(
-            child: VerfiyOtpScreen(isFromSignup: isFromSignup),
+            child: ResetPasswordScreen(otp: otp, email: email),
+          ),
+        );
+
+      case verifyOtpScreen:
+        final args = settings.arguments;
+        bool isFromSignup = false;
+        String? email;
+        String? password;
+        String? role;
+        String? otp;
+
+        if (args is Map<String, dynamic>) {
+          isFromSignup = args['isFromSignup'] ?? false;
+          email = args['email'];
+          password = args['password'];
+          role = args['role'];
+          otp = args['otp'];
+        } else if (args is bool) {
+          isFromSignup = args;
+        }
+
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) => OfflineWrapper(
+            child: VerfiyOtpScreen(
+              isFromSignup: isFromSignup,
+              email: email,
+              password: password,
+              role: role,
+              otp: otp,
+            ),
           ),
         );
 
