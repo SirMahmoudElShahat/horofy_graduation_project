@@ -51,6 +51,7 @@ class _Level5ScreenState extends State<Level5Screen> {
   bool _showResult = false;
   bool? _isCorrectMatch;
   int _childId = 0;
+  bool _isModelReady = false;
 
   _Level5Step _step = _Level5Step.writeBa;
 
@@ -81,6 +82,20 @@ class _Level5ScreenState extends State<Level5Screen> {
     if (!isDownloaded) {
       await _modelManager.downloadModel('ar');
     }
+    // warm-up
+    try {
+      final dummyInk = ml_ink.Ink();
+      dummyInk.strokes.add(
+        Stroke()
+          ..points.addAll([
+            StrokePoint(x: 0, y: 0, t: 0),
+            StrokePoint(x: 1, y: 1, t: 1),
+          ]),
+      );
+      await _recognizer.recognize(dummyInk);
+    } catch (_) {}
+
+    if (mounted) setState(() => _isModelReady = true);
   }
 
   @override
@@ -304,113 +319,137 @@ class _Level5ScreenState extends State<Level5Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
+      body: !_isModelReady
+          ? _buildLoadingView()
+          : SafeArea(
+              child: Stack(
                 children: [
-                  // ── Header row: title + headphone ────────────
-                  _step == _Level5Step.writeBa
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text(
-                              _headerText(),
-                              style: AppTextStyles.blackFont.copyWith(
-                                fontSize: 35,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            ExercisesButton(
-                              onPressed: _playBaSound,
-                              buttonIcon: Icons.headphones,
-                            ),
-                          ],
-                        )
-                      : SizedBox(),
-                  SizedBox(height: _step == _Level5Step.writeBa ? 30 : 0),
-                  // ── Image + suffix label (steps 2 & 3) ───────
-                  if (_step != _Level5Step.writeBa) ...[
-                    Image.asset(
-                      _stepImagePath(),
-                      height: 150,
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.image_outlined,
-                        size: 80,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-
-                  // ── Writing area row ──────────────────────────
-                  SizedBox(
-                    height: 110,
-                    child: Row(
+                  Center(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          textDirection: TextDirection
-                              .rtl, // لضمان وضع حرف الـ ب يمين الكلمة دائماً
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            _buildWritingArea(),
-                            if (_step != _Level5Step.writeBa)
-                              Text(
-                                _stepSuffix(),
-                                style: AppTextStyles.blackFont.copyWith(
-                                  fontSize: 48,
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(width: 16),
-                        // Send / draw button
-                        _isProcessing
-                            ? const SizedBox(
-                                width: 50,
-                                height: 50,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                  strokeWidth: 3,
-                                ),
+                        // ── Header row: title + headphone ────────────
+                        _step == _Level5Step.writeBa
+                            ? Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    _headerText(),
+                                    style: AppTextStyles.blackFont.copyWith(
+                                      fontSize: 35,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  ExercisesButton(
+                                    onPressed: _playBaSound,
+                                    buttonIcon: Icons.headphones,
+                                  ),
+                                ],
                               )
-                            : ExercisesButton(
-                                buttonIcon: _hasStrokes
-                                    ? Icons.send_rounded
-                                    : Icons.draw,
-                                onPressed:
-                                    (_hasStrokes && _isCorrectMatch != true)
-                                    ? _recognize
-                                    : () {},
+                            : SizedBox(),
+                        SizedBox(height: _step == _Level5Step.writeBa ? 30 : 0),
+                        // ── Image + suffix label (steps 2 & 3) ───────
+                        if (_step != _Level5Step.writeBa) ...[
+                          Image.asset(
+                            _stepImagePath(),
+                            height: 150,
+                            fit: BoxFit.contain,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.image_outlined,
+                              size: 80,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                        ],
+
+                        // ── Writing area row ──────────────────────────
+                        SizedBox(
+                          height: 110,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              Row(
+                                mainAxisSize: MainAxisSize.min,
+                                textDirection: TextDirection
+                                    .rtl, // لضمان وضع حرف الـ ب يمين الكلمة دائماً
+                                crossAxisAlignment: CrossAxisAlignment.center,
+                                children: [
+                                  _buildWritingArea(),
+                                  if (_step != _Level5Step.writeBa)
+                                    Text(
+                                      _stepSuffix(),
+                                      style: AppTextStyles.blackFont.copyWith(
+                                        fontSize: 48,
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                ],
                               ),
+                              const SizedBox(width: 16),
+                              // Send / draw button
+                              _isProcessing
+                                  ? const SizedBox(
+                                      width: 50,
+                                      height: 50,
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.primary,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                  : ExercisesButton(
+                                      buttonIcon: _hasStrokes
+                                          ? Icons.send_rounded
+                                          : Icons.draw,
+                                      onPressed:
+                                          (_hasStrokes &&
+                                              _isCorrectMatch != true)
+                                          ? _recognize
+                                          : () {},
+                                    ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
+
+                  // ── Reset button (top left) ───────────────────────
+                  if (_hasStrokes)
+                    Positioned(
+                      top: 20,
+                      left: 20,
+                      child: ExercisesButton(
+                        buttonIcon: Icons.refresh,
+                        onPressed: _reset,
+                      ),
+                    ),
                 ],
               ),
             ),
+    );
+  }
 
-            // ── Reset button (top left) ───────────────────────
-            if (_hasStrokes)
-              Positioned(
-                top: 20,
-                left: 20,
-                child: ExercisesButton(
-                  buttonIcon: Icons.refresh,
-                  onPressed: _reset,
-                ),
-              ),
-          ],
-        ),
+  /// ── Loading view while model is being prepared ─────────────────
+  Widget _buildLoadingView() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(color: AppColors.primary),
+          const SizedBox(height: 20),
+          Text(
+            '...جاري التحضير',
+            style: TextStyle(
+              fontFamily: 'Cairo-ExtraBold',
+              fontSize: 16,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
       ),
     );
   }

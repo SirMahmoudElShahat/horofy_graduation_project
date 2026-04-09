@@ -37,6 +37,7 @@ class _Level7ScreenState extends State<Level7Screen> {
   bool _showResult = false; // Show recognized text above the dots
   bool? _isCorrectMatch; // Track if the result is correct for coloring
   int _childId = 0;
+  bool _isModelReady = false;
 
   // ── Target word ───────────────────────────────────────────
   // Target word required from the child: "بطرك" (Image name: batrek)
@@ -60,6 +61,20 @@ class _Level7ScreenState extends State<Level7Screen> {
     if (!isDownloaded) {
       await _modelManager.downloadModel('ar');
     }
+    // warm-up
+    try {
+      final dummyInk = ml_ink.Ink();
+      dummyInk.strokes.add(
+        Stroke()
+          ..points.addAll([
+            StrokePoint(x: 0, y: 0, t: 0),
+            StrokePoint(x: 1, y: 1, t: 1),
+          ]),
+      );
+      await _recognizer.recognize(dummyInk);
+    } catch (_) {}
+
+    if (mounted) setState(() => _isModelReady = true);
   }
 
   @override
@@ -142,7 +157,8 @@ class _Level7ScreenState extends State<Level7Screen> {
 
   // ── Recognize ─────────────────────────────────────────────
   Future<void> _recognize() async {
-    if (_ink.strokes.isEmpty || _isProcessing || _isCorrectMatch == true) return;
+    if (_ink.strokes.isEmpty || _isProcessing || _isCorrectMatch == true)
+      return;
 
     setState(() => _isProcessing = true);
 
@@ -237,75 +253,100 @@ class _Level7ScreenState extends State<Level7Screen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.center,
+      body: !_isModelReady
+          ? _buildLoadingView()
+          : SafeArea(
+              child: Stack(
                 children: [
-                  // ── Batrek Image ─────────────────────────────
-                  Image.asset(
-                    'assets/images/level7/batrek.png',
-                    width: 200,
-                    height: 200,
-                    errorBuilder: (_, __, ___) => const Icon(
-                      Icons.image_outlined,
-                      size: 100,
-                      color: Colors.grey,
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-
-                  // ── Writing Area ────────────────────────────
-                  Container(
-                    height: 110,
-                    child: Row(
+                  Center(
+                    child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // ── Dotted line + Writing ───────────────
-                        _buildWritingArea(),
-                        const SizedBox(width: 16),
+                        // ── Batrek Image ─────────────────────────────
+                        Image.asset(
+                          'assets/images/level7/batrek.png',
+                          width: 200,
+                          height: 200,
+                          errorBuilder: (_, __, ___) => const Icon(
+                            Icons.image_outlined,
+                            size: 100,
+                            color: Colors.grey,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
 
-                        // ── Pencil / Send button ─────────────────
-                        _isProcessing
-                            ? const SizedBox(
-                                width: 50,
-                                height: 50,
-                                child: CircularProgressIndicator(
-                                  color: AppColors.primary,
-                                  strokeWidth: 3,
-                                ),
-                              )
-                            : ExercisesButton(
-                                buttonIcon: _hasStrokes
-                                    ? Icons.send_rounded
-                                    : Icons.draw,
-                                onPressed: (_hasStrokes && _isCorrectMatch != true)
-                                    ? _recognize
-                                    : () {},
-                              ),
+                        // ── Writing Area ────────────────────────────
+                        Container(
+                          height: 110,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              // ── Dotted line + Writing ───────────────
+                              _buildWritingArea(),
+                              const SizedBox(width: 16),
+
+                              // ── Pencil / Send button ─────────────────
+                              _isProcessing
+                                  ? const SizedBox(
+                                      width: 50,
+                                      height: 50,
+                                      child: CircularProgressIndicator(
+                                        color: AppColors.primary,
+                                        strokeWidth: 3,
+                                      ),
+                                    )
+                                  : ExercisesButton(
+                                      buttonIcon: _hasStrokes
+                                          ? Icons.send_rounded
+                                          : Icons.draw,
+                                      onPressed:
+                                          (_hasStrokes &&
+                                              _isCorrectMatch != true)
+                                          ? _recognize
+                                          : () {},
+                                    ),
+                            ],
+                          ),
+                        ),
                       ],
                     ),
                   ),
+
+                  // ── Reset button (Top Left) ─────────────────────
+                  if (_hasStrokes)
+                    Positioned(
+                      top: 20,
+                      left: 20,
+                      child: ExercisesButton(
+                        buttonIcon: Icons.refresh,
+                        onPressed: _reset,
+                      ),
+                    ),
                 ],
               ),
             ),
+    );
+  }
 
-            // ── Reset button (Top Left) ─────────────────────
-            if (_hasStrokes)
-              Positioned(
-                top: 20,
-                left: 20,
-                child: ExercisesButton(
-                  buttonIcon: Icons.refresh,
-                  onPressed: _reset,
-                ),
-              ),
-          ],
-        ),
+  /// ── Loading view while model is being prepared ─────────────────
+  Widget _buildLoadingView() {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const CircularProgressIndicator(color: AppColors.primary),
+          const SizedBox(height: 20),
+          Text(
+            '...جاري التحضير',
+            style: TextStyle(
+              fontFamily: 'Cairo-ExtraBold',
+              fontSize: 16,
+              color: AppColors.primary,
+            ),
+          ),
+        ],
       ),
     );
   }
