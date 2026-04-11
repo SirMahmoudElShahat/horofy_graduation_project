@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:horofy/core/constants/levels.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_state.dart';
@@ -19,6 +20,7 @@ class ChildLevelsScreen extends StatefulWidget {
 class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
   ChildEntity? child;
   String currentLevelEn = 'level1';
+  bool isSkipping = false;
 
   @override
   void didChangeDependencies() {
@@ -47,10 +49,12 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
     final next = num + 1;
     final nextEn = 'level$next';
 
+    setState(() => isSkipping = true);
     try {
       await context.read<ChildCubit>().updateLevel(child!.id!, nextEn);
       setState(() {
         currentLevelEn = nextEn;
+        isSkipping = false;
       });
       _showSnackBar(
         context,
@@ -59,6 +63,7 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
         isError: false,
       );
     } catch (e) {
+      setState(() => isSkipping = false);
       _showSnackBar(context, "خطأ", "خطأ في التحديث");
     }
   }
@@ -111,10 +116,12 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
               Positioned(
                 top: 25,
                 right: 10,
-                child: TextButton(
-                  onPressed: _skipLevel,
-                  child: const Text("تخطى", style: AppTextStyles.greyFont),
-                ),
+                child: isSkipping
+                    ? const LoadingWidget(size: 50)
+                    : TextButton(
+                        onPressed: _skipLevel,
+                        child: const Text("تخطى", style: AppTextStyles.greyFont),
+                      ),
               ),
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 250),
@@ -165,7 +172,7 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
                             arguments: {'childId': child?.id},
                           );
                           break;
-                        case 'level7':  
+                        case 'level7':
                           Navigator.pushNamed(
                             context,
                             level7Screen,

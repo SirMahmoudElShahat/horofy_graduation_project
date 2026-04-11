@@ -1,6 +1,6 @@
 class AppApis {
   // Base URL
-  static const String baseUrl = 'https://deslexiadesgraphiaproject-production-3fb1.up.railway.app';
+  static const String baseUrl = 'https://deslexia-desgraphia-production.up.railway.app';
 
   // ==========================================
   // Authentication
@@ -54,9 +54,11 @@ class AppApis {
   // ==========================================
   // Children
   // ==========================================
-  static const String createChild = '$baseUrl/children'; // POST
-  static const String getChildren = '$baseUrl/children'; // GET
-  static String updateChild(String id) => '$baseUrl/children/$id'; // PATCH: Update child profile
+  static const String createChild = '$baseUrl/api/children'; // POST: Create child
+  static const String getChildren = '$baseUrl/api/children'; // GET: Get all children for the logged-in parent
+  static String getChildById(String id) => '$baseUrl/api/children/$id'; // GET: Get a specific child by ID
+  static String updateChild(String id) => '$baseUrl/api/children/$id'; // PUT: Update child information
+  static String deleteChild(String id) => '$baseUrl/api/children/$id'; // DELETE: Delete a child
 
   // ==========================================
   // Submissions

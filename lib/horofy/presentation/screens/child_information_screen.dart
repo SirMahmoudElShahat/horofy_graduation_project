@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/domain/entities/child_entity.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_state.dart';
@@ -26,12 +27,14 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
     'assets/images/child/avater7.jpg',
     'assets/images/child/avater8.jpg',
   ];
+
   DateTime? selectedDate;
   final TextEditingController dateController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
-  int selectedGender = -1; // 0 for girl, 1 for boy
+  int selectedGender = -1;
   int selectedAvatar = -1;
   ChildEntity? editingChild;
+  bool isAdding = false;
 
   @override
   void didChangeDependencies() {
@@ -42,7 +45,6 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
         editingChild = arg;
         nameController.text = editingChild!.name;
         dateController.text = editingChild!.birthDate;
-        // try parse birth date formatted as dd/MM/yyyy
         try {
           final parts = editingChild!.birthDate.split('/');
           if (parts.length == 3) {
@@ -82,38 +84,24 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            'ٳسم الطفل',
-            style: AppTextStyles.blackFont,
-            textAlign: TextAlign.right,
-          ),
+          child: Text('ٳسم الطفل', style: AppTextStyles.blackFont, textAlign: TextAlign.right),
         ),
         Container(
           margin: const EdgeInsets.only(top: 10, bottom: 20),
           decoration: BoxDecoration(
             color: AppColors.background,
             borderRadius: BorderRadius.circular(25),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 5,
-                offset: Offset(0, 8),
-              ),
-            ],
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 8))],
           ),
           child: TextField(
             controller: nameController,
-            keyboardType: TextInputType.emailAddress,
             textAlign: TextAlign.center,
             textAlignVertical: TextAlignVertical.center,
             decoration: InputDecoration(
               hintText: 'محمود',
               hintStyle: AppTextStyles.greyFont,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 18,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
             ),
           ),
         ),
@@ -127,24 +115,14 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            'تاريخ الميلاد',
-            style: AppTextStyles.blackFont,
-            textAlign: TextAlign.right,
-          ),
+          child: Text('تاريخ الميلاد', style: AppTextStyles.blackFont, textAlign: TextAlign.right),
         ),
         Container(
           margin: const EdgeInsets.only(top: 10, bottom: 20),
           decoration: BoxDecoration(
             color: AppColors.background,
             borderRadius: BorderRadius.circular(25),
-            boxShadow: const [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 5,
-                offset: Offset(0, 8),
-              ),
-            ],
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 8))],
           ),
           child: TextField(
             controller: dateController,
@@ -154,10 +132,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
               hintText: '01/01/2000',
               hintStyle: AppTextStyles.greyFont,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 18,
-              ),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
               prefixIcon: const Icon(Icons.calendar_today, color: Colors.black),
             ),
             onTap: () async {
@@ -168,7 +143,6 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
                 firstDate: DateTime(1900),
                 lastDate: DateTime.now(),
               );
-
               if (pickedDate != null) {
                 setState(() {
                   selectedDate = pickedDate;
@@ -191,150 +165,74 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
       children: [
         Align(
           alignment: Alignment.centerRight,
-          child: Text(
-            'الجنس',
-            style: AppTextStyles.blackFont,
-            textAlign: TextAlign.right,
-          ),
+          child: Text('الجنس', style: AppTextStyles.blackFont, textAlign: TextAlign.right),
         ),
         const SizedBox(height: 10),
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                border: selectedGender == 0
-                    ? Border.all(color: Colors.black, width: 2)
-                    : null,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 5,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  elevation: 0,
-                  backgroundColor: AppColors.background,
-                  overlayColor: Colors.transparent,
-                  minimumSize: const Size(150, 60),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
-                onPressed: () {
-                  setState(() {
-                    if (selectedGender != 0) {
-                      selectedAvatar = -1;
-                    }
-                    selectedGender = 0;
-                  });
-                },
-                child: Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/child/girl.png',
-                      fit: BoxFit.contain,
-                      width: 40,
-                      height: 40,
-                    ),
-                    const SizedBox(width: 40),
-                    Text(
-                      'بنت',
-                      style: AppTextStyles.blackFont.copyWith(fontSize: 15),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(25),
-                border: selectedGender == 1
-                    ? Border.all(color: Colors.black, width: 2)
-                    : null,
-                boxShadow: const [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 5,
-                    offset: Offset(0, 8),
-                  ),
-                ],
-              ),
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  elevation: 0,
-                  backgroundColor: AppColors.background,
-                  overlayColor: Colors.transparent,
-                  minimumSize: const Size(150, 60),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(25),
-                  ),
-                ),
-                onPressed: () {
-                  setState(() {
-                    if (selectedGender != 1) {
-                      selectedAvatar = -1;
-                    }
-                    selectedGender = 1;
-                  });
-                },
-                child: Row(
-                  children: [
-                    Image.asset(
-                      'assets/images/child/boy.png',
-                      fit: BoxFit.cover,
-                      width: 40,
-                      height: 40,
-                    ),
-                    const SizedBox(width: 40),
-                    Text(
-                      'ولد',
-                      style: AppTextStyles.blackFont.copyWith(fontSize: 15),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+            _genderButton(label: 'بنت', value: 0, imagePath: 'assets/images/child/girl.png'),
+            _genderButton(label: 'ولد', value: 1, imagePath: 'assets/images/child/boy.png'),
           ],
         ),
       ],
     );
   }
 
+  Widget _genderButton({required String label, required int value, required String imagePath}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(25),
+        border: selectedGender == value ? Border.all(color: Colors.black, width: 2) : null,
+        boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 5, offset: Offset(0, 8))],
+      ),
+      child: ElevatedButton(
+        style: ElevatedButton.styleFrom(
+          elevation: 0,
+          backgroundColor: AppColors.background,
+          overlayColor: Colors.transparent,
+          minimumSize: const Size(150, 60),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)),
+        ),
+        onPressed: () {
+          setState(() {
+            if (selectedGender != value) selectedAvatar = -1;
+            selectedGender = value;
+          });
+        },
+        child: Row(
+          children: [
+            Image.asset(imagePath, fit: BoxFit.contain, width: 40, height: 40),
+            const SizedBox(width: 40),
+            Text(label, style: AppTextStyles.blackFont.copyWith(fontSize: 15)),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildAvatarGrid() {
     if (selectedGender == -1) return const SizedBox.shrink();
 
-    final List<String> genderSpecificImages;
-    final int avatarIndexOffset;
+    final List<String> genderImages;
+    final int offset;
 
     if (selectedGender == 0) {
-      // Girl avatars (first 4)
-      genderSpecificImages = _images.sublist(0, 4);
-      avatarIndexOffset = 0;
+      genderImages = _images.sublist(0, 4);
+      offset = 0;
     } else {
-      // Boy avatars (last 4)
-      genderSpecificImages = _images.sublist(4);
-      avatarIndexOffset = 4;
+      genderImages = _images.sublist(4);
+      offset = 4;
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const SizedBox(height: 20),
-        Align(
+        const Align(
           alignment: Alignment.centerRight,
-          child: const Text(
-            'ٳختار صورة',
-            style: AppTextStyles.blackFont,
-            textAlign: TextAlign.right,
-          ),
+          child: Text('ٳختار صورة', style: AppTextStyles.blackFont, textAlign: TextAlign.right),
         ),
         const SizedBox(height: 10),
         GridView.count(
@@ -343,26 +241,20 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
           crossAxisCount: 4,
           mainAxisSpacing: 16,
           crossAxisSpacing: 16,
-          children: List.generate(genderSpecificImages.length, (index) {
-            final globalIndex = index + avatarIndexOffset;
+          children: List.generate(genderImages.length, (index) {
+            final globalIndex = index + offset;
             return GestureDetector(
-              onTap: () {
-                setState(() {
-                  selectedAvatar = globalIndex;
-                });
-              },
+              onTap: () => setState(() => selectedAvatar = globalIndex),
               child: Container(
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   border: Border.all(
-                    color: selectedAvatar == globalIndex
-                        ? Colors.black
-                        : Colors.grey.shade400,
+                    color: selectedAvatar == globalIndex ? Colors.black : Colors.grey.shade400,
                     width: selectedAvatar == globalIndex ? 4 : 1,
                   ),
                 ),
                 child: ClipOval(
-                  child: Image.asset(genderSpecificImages[index], fit: BoxFit.cover),
+                  child: Image.asset(genderImages[index], fit: BoxFit.cover),
                 ),
               ),
             );
@@ -376,45 +268,26 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
     return CustomButton(
       text: editingChild == null ? 'ٳضافة' : 'تعديل',
       onPressed: () {
-        // basic checks
         if (nameController.text.isEmpty ||
             dateController.text.isEmpty ||
             selectedGender == -1 ||
             selectedAvatar == -1) {
-          _showSnackBar(
-            context,
-            'تنبيه',
-            'يرجى إكمال جميع البيانات',
-            isError: true,
-          );
+          _showSnackBar(context, 'تنبيه', 'يرجى إكمال جميع البيانات', isError: true);
           return;
         }
 
-        // name must be a single Arabic word (no spaces, Arabic letters only)
         final name = nameController.text.trim();
         final arabicSingleWord = RegExp(r'^[\u0600-\u06FF]+$');
         if (!arabicSingleWord.hasMatch(name)) {
-          _showSnackBar(
-            context,
-            'تنبيه',
-            'الاسم يجب أن يكون كلمة واحدة',
-            isError: true,
-          );
+          _showSnackBar(context, 'تنبيه', 'الاسم يجب أن يكون كلمة واحدة', isError: true);
           return;
         }
 
-        // date must be selected
         if (selectedDate == null) {
-          _showSnackBar(
-            context,
-            'تنبيه',
-            'يرجى اختيار تاريخ الميلاد',
-            isError: true,
-          );
+          _showSnackBar(context, 'تنبيه', 'يرجى اختيار تاريخ الميلاد', isError: true);
           return;
         }
 
-        // compute age from account creation date (using now())
         final now = DateTime.now();
         int age = now.year - selectedDate!.year;
         if (now.month < selectedDate!.month ||
@@ -423,17 +296,13 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
         }
 
         if (age < 4 || age > 12) {
-          _showSnackBar(
-            context,
-            'تنبيه',
-            'يجب أن يكون عمر الطفل بين 4 و 12 سنة',
-            isError: true,
-          );
+          _showSnackBar(context, 'تنبيه', 'يجب أن يكون عمر الطفل بين 4 و 12 سنة', isError: true);
           return;
         }
 
         final child = ChildEntity(
           id: editingChild?.id,
+          remoteId: editingChild?.remoteId,
           name: name,
           birthDate: dateController.text,
           gender: selectedGender,
@@ -452,8 +321,6 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // UI builds; editingChild is populated in didChangeDependencies
-
     return BlocListener<ChildCubit, ChildState>(
       listener: (context, state) {
         if (state is ChildAddSuccess) {
@@ -461,48 +328,56 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
           Navigator.pop(context);
         } else if (state is ChildAddError) {
           _showSnackBar(context, 'خطأ', state.message);
+          setState(() => isAdding = false);
         } else if (state is ChildUpdateSuccess) {
-          _showSnackBar(
-            context,
-            'تم',
-            'تم تعديل بيانات الطفل بنجاح',
-            isError: false,
-          );
+          _showSnackBar(context, 'تم', 'تم تعديل بيانات الطفل بنجاح', isError: false);
           Navigator.pop(context);
         } else if (state is ChildUpdateError) {
           _showSnackBar(context, 'خطأ', state.message);
+          setState(() => isAdding = false);
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 30),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                _buildHeader(),
-                _buildNameField(),
-                _buildDateField(),
-                _buildGenderSelector(),
-                _buildAvatarGrid(),
-                const SizedBox(height: 40),
-                _buildSubmitButton(),
-                const SizedBox(height: 50),
-              ],
-            ),
-          ),
-        ),
+      child: BlocBuilder<ChildCubit, ChildState>(
+        builder: (context, state) {
+          final isLoading = state is ChildAddLoading || state is ChildUpdateLoading;
+
+          return Stack(
+            children: [
+              Scaffold(
+                backgroundColor: AppColors.background,
+                body: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 30),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        _buildHeader(),
+                        _buildNameField(),
+                        _buildDateField(),
+                        _buildGenderSelector(),
+                        _buildAvatarGrid(),
+                        const SizedBox(height: 40),
+                        _buildSubmitButton(),
+                        const SizedBox(height: 50),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              // Loading overlay — covers the whole screen while saving
+              if (isLoading)
+                Container(
+                  color: Colors.black.withOpacity(0.35),
+                  child: const LoadingWidget(),
+                ),
+            ],
+          );
+        },
       ),
     );
   }
 
-  void _showSnackBar(
-    BuildContext context,
-    String title,
-    String message, {
-    bool isError = true,
-  }) {
+  void _showSnackBar(BuildContext context, String title, String message, {bool isError = true}) {
     Get.snackbar(
       title,
       message,

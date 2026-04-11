@@ -5,6 +5,7 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/constants/levels.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/domain/entities/child_entity.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_state.dart';
@@ -20,7 +21,6 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
   @override
   void initState() {
     super.initState();
-    // تحميل قائمة الأطفال عند فتح الصفحة
     context.read<ChildCubit>().loadChildren();
   }
 
@@ -44,7 +44,6 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: () {
           Navigator.pushNamed(context, childInformationScreen).then((_) {
-            // تحديث القائمة عند العودة من صفحة الإضافة
             if (mounted) {
               context.read<ChildCubit>().loadChildren();
             }
@@ -56,7 +55,7 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
       body: BlocBuilder<ChildCubit, ChildState>(
         builder: (context, state) {
           if (state is ChildLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return const LoadingWidget(fullScreen: true);
           } else if (state is ChildLoaded) {
             if (state.children.isEmpty) {
               return _buildEmptyState();
@@ -110,7 +109,6 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
       ),
       child: Row(
         children: [
-          // Actions
           Column(
             children: [
               Icon(
@@ -129,23 +127,17 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
                         color: Colors.red.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.delete,
-                        color: Colors.red,
-                        size: 20,
-                      ),
+                      child: const Icon(Icons.delete, color: Colors.red, size: 20),
                     ),
                   ),
                   const SizedBox(width: 8),
                   InkWell(
                     onTap: () async {
-                      // Navigate to the child information screen in edit mode
                       await Navigator.pushNamed(
                         context,
                         childInformationScreen,
                         arguments: child,
                       );
-                      // Refresh list after returning
                       if (mounted) {
                         context.read<ChildCubit>().loadChildren();
                       }
@@ -156,18 +148,13 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
                         color: Colors.orange.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: const Icon(
-                        Icons.edit,
-                        color: Colors.orange,
-                        size: 20,
-                      ),
+                      child: const Icon(Icons.edit, color: Colors.orange, size: 20),
                     ),
                   ),
                 ],
               ),
             ],
           ),
-          // Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.end,
@@ -198,26 +185,18 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
                       style: AppTextStyles.greyFont.copyWith(fontSize: 14),
                     ),
                     const SizedBox(width: 5),
-                    Icon(
-                      Icons.cake_outlined,
-                      size: 18,
-                      color: Colors.grey.shade600,
-                    ),
+                    Icon(Icons.cake_outlined, size: 18, color: Colors.grey.shade600),
                   ],
                 ),
               ],
             ),
           ),
           const SizedBox(width: 15),
-          // Avatar
           Container(
             padding: const EdgeInsets.all(2),
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                color: Theme.of(context).primaryColor,
-                width: 2,
-              ),
+              border: Border.all(color: Theme.of(context).primaryColor, width: 2),
             ),
             child: CircleAvatar(
               radius: 35,
@@ -236,15 +215,10 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
       builder: (BuildContext context) {
         return AlertDialog(
           backgroundColor: AppColors.background,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           title: const Text(
             'حذف الطفل',
-            style: TextStyle(
-              color: Color(0xFFE57373),
-              fontWeight: FontWeight.bold,
-            ),
+            style: TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.bold),
             textAlign: TextAlign.center,
           ),
           content: Text(
@@ -257,53 +231,30 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 ElevatedButton(
-                  onPressed: () {
-                    Navigator.of(context).pop();
-                  },
+                  onPressed: () => Navigator.of(context).pop(),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFBF8FFE),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   ),
-                  child: const Text(
-                    'إلغاء',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  child: const Text('إلغاء', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
                 ElevatedButton(
                   onPressed: () {
                     Navigator.of(context).pop();
                     if (child.id != null) {
                       context.read<ChildCubit>().deleteChild(child.id!);
-                      _showSnackBar(
-                        context,
-                        'تم',
-                        'تم حذف الطفل بنجاح',
-                        isError: false,
-                      );
+                      _showSnackBar(context, 'تم', 'تم حذف الطفل بنجاح', isError: false);
                     }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFFE57373),
                     foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   ),
-                  child: const Text(
-                    'حذف',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  child: const Text('حذف', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
@@ -313,12 +264,7 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
     );
   }
 
-  void _showSnackBar(
-    BuildContext context,
-    String title,
-    String message, {
-    bool isError = true,
-  }) {
+  void _showSnackBar(BuildContext context, String title, String message, {bool isError = true}) {
     Get.snackbar(
       title,
       message,
