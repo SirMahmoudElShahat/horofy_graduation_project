@@ -4,6 +4,7 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/helper/orientation_helper.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
@@ -62,7 +63,7 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                 BlocBuilder<ChildCubit, ChildState>(
                   builder: (context, state) {
                     if (state is ChildLoading) {
-                      return const Center(child: CircularProgressIndicator());
+                      return const LoadingWidget();
                     } else if (state is ChildLoaded) {
                       if (state.children.isEmpty) {
                         return Text(
@@ -77,7 +78,11 @@ class _MainHomeScreenState extends State<MainHomeScreen> {
                             child: CustomButton(
                               text: child.name,
                               onPressed: () {
-                                Navigator.pushNamed(context, childHomeScreen, arguments: child);
+                                Navigator.pushNamed(
+                                  context,
+                                  childHomeScreen,
+                                  arguments: child,
+                                );
                               },
                             ),
                           );

@@ -9,15 +9,15 @@ class ChildCubit extends Cubit<ChildState> {
   final DeleteChildUseCase deleteChildUseCase;
   final UpdateChildUseCase updateChildUseCase;
 
-  ChildCubit(
-    AddChildUseCase addChildUseCase, {
+  // Constructor fixed — no duplicate positional parameter
+  ChildCubit({
     required this.addChild,
     required this.getChildrenUseCase,
     required this.deleteChildUseCase,
     required this.updateChildUseCase,
   }) : super(ChildInitial());
 
-  /// ADD
+  // ── ADD ───────────────────────────────────────────────────
   Future<void> addNewChild(ChildEntity child) async {
     try {
       emit(ChildAddLoading());
@@ -29,27 +29,24 @@ class ChildCubit extends Cubit<ChildState> {
     }
   }
 
-  /// GET LIST
+  // ── GET LIST ──────────────────────────────────────────────
   Future<void> loadChildren() async {
     try {
       emit(ChildLoading());
-
       final children = await getChildrenUseCase();
-
       emit(ChildLoaded(children));
     } catch (e) {
-      // If fetching fails (e.g. DB not ready), emit an empty list to keep UI stable
       emit(const ChildLoaded([]));
     }
   }
 
-  /// DELETE
+  // ── DELETE ────────────────────────────────────────────────
   Future<void> deleteChild(int id) async {
     await deleteChildUseCase(id);
-    loadChildren();
+    await loadChildren();
   }
 
-  /// UPDATE
+  // ── UPDATE ────────────────────────────────────────────────
   Future<void> updateChild(ChildEntity child) async {
     try {
       emit(ChildUpdateLoading());
@@ -61,20 +58,8 @@ class ChildCubit extends Cubit<ChildState> {
     }
   }
 
-  /// GET CURRENT LEVEL FOR A CHILD
-  Future<String?> getCurrentLevel(int childId) async {
-    try {
-      final children = await getChildrenUseCase();
-      for (final c in children) {
-        if (c.id == childId) return c.level;
-      }
-      return null;
-    } catch (e) {
-      return null;
-    }
-  }
-
-  /// UPDATE LEVEL FOR A CHILD (keeps other fields)
+  // ── UPDATE LEVEL — silent, no UI state change ─────────────
+  // Calls use case directly to avoid ChildUpdateLoading flickering the UI
   Future<void> updateLevel(int childId, String newLevel) async {
     try {
       final children = await getChildrenUseCase();
@@ -89,6 +74,7 @@ class ChildCubit extends Cubit<ChildState> {
 
       final updated = ChildEntity(
         id: found.id,
+        remoteId: found.remoteId,
         name: found.name,
         birthDate: found.birthDate,
         gender: found.gender,
@@ -96,9 +82,25 @@ class ChildCubit extends Cubit<ChildState> {
         level: newLevel,
       );
 
-      await updateChild(updated);
+      // Direct use case call — no emit to avoid UI disruption
+      await updateChildUseCase(updated);
+      // Reload children to sync with server after update
+      await loadChildren();
     } catch (e) {
       emit(ChildUpdateError(e.toString()));
+    }
+  }
+
+  // ── GET CURRENT LEVEL ─────────────────────────────────────
+  Future<String?> getCurrentLevel(int childId) async {
+    try {
+      final children = await getChildrenUseCase();
+      for (final c in children) {
+        if (c.id == childId) return c.level;
+      }
+      return null;
+    } catch (e) {
+      return null;
     }
   }
 }

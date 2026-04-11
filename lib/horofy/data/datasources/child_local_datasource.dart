@@ -19,6 +19,24 @@ class ChildLocalDataSourceImpl
   Future<void> addChild(ChildModel child) async {
     final db = await AppDatabase.database;
 
+    // Check if child already exists by name and birthDate
+    final existing = await db.query(
+      'children',
+      where: 'name = ? AND birthDate = ?',
+      whereArgs: [child.name, child.birthDate],
+    );
+
+    if (existing.isNotEmpty) {
+      // Update existing child with new data (e.g., remoteId if missing)
+      await db.update(
+        'children',
+        child.toMap(),
+        where: 'id = ?',
+        whereArgs: [existing.first['id']],
+      );
+      return;
+    }
+
     await db.insert('children', child.toMap());
   }
 

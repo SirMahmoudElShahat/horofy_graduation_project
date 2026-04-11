@@ -11,6 +11,7 @@ import 'package:google_mlkit_digital_ink_recognition/google_mlkit_digital_ink_re
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 
@@ -439,7 +440,7 @@ class _Level5ScreenState extends State<Level5Screen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const CircularProgressIndicator(color: AppColors.primary),
+          const LoadingWidget(),
           const SizedBox(height: 20),
           Text(
             '...جاري التحضير',

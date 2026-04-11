@@ -15,11 +15,12 @@ class AppDatabase {
 
     return openDatabase(
       join(dbPath, 'horofy.db'),
-      version: 3,
+      version: 4, // bumped from 3 → 4
       onCreate: (db, version) async {
         await db.execute('''
         CREATE TABLE children(
           id INTEGER PRIMARY KEY AUTOINCREMENT,
+          remoteId TEXT,
           name TEXT,
           birthDate TEXT,
           gender INTEGER,
@@ -59,6 +60,12 @@ class AppDatabase {
             FOREIGN KEY (childId) REFERENCES children (id)
           )
           ''');
+        }
+        if (oldVersion < 4) {
+          // Add remoteId column to existing installs
+          await db.execute(
+            "ALTER TABLE children ADD COLUMN remoteId TEXT",
+          );
         }
       },
     );
