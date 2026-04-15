@@ -131,6 +131,7 @@ class ParentHomeScreen extends StatelessWidget {
             const SizedBox(height: 80),
             Center(child: Image.asset('assets/images/login.png')),
             const SizedBox(height: 100),
+            // Parent Home Button
             CustomButton(
               text: 'لوحة التحكم',
               onPressed: () {
@@ -139,14 +140,16 @@ class ParentHomeScreen extends StatelessWidget {
               buttonColor: const Color(0xFF34C759),
             ),
             const SizedBox(height: 30),
+            // Chat with Shelpy Button
             CustomButton(
               text: 'التحدث مع شلبى',
               onPressed: () {
-                Navigator.pushNamed(context, chatScreen);
+                Navigator.pushNamed(context, conversationsListScreen);
               },
               buttonColor: const Color(0xFFBF8FFE),
             ),
             const SizedBox(height: 30),
+            // Child List Button
             CustomButton(
               text: 'قائمة الأطفال',
               onPressed: () {
@@ -155,6 +158,7 @@ class ParentHomeScreen extends StatelessWidget {
               buttonColor: const Color(0xFF64B5F6),
             ),
             const SizedBox(height: 30),
+            // Add Child Button
             CustomButton(
               text: 'ٳضافة طفل',
               onPressed: () {
@@ -163,6 +167,7 @@ class ParentHomeScreen extends StatelessWidget {
               buttonColor: const Color(0xFFFFB74D),
             ),
             const SizedBox(height: 30),
+            // logout button
             CustomButton(
               text: 'تسجيل الخروج',
               onPressed: () {

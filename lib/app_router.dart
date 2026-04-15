@@ -6,6 +6,7 @@ import 'package:horofy/horofy/presentation/screens/child_home_screen.dart';
 import 'package:horofy/horofy/presentation/screens/child_information_screen.dart';
 import 'package:horofy/horofy/presentation/screens/child_levels_screen.dart';
 import 'package:horofy/horofy/presentation/screens/childs_list_screen.dart';
+import 'package:horofy/horofy/presentation/screens/conversations_list_screen.dart';
 import 'package:horofy/horofy/presentation/screens/exercises_result_screen.dart';
 import 'package:horofy/horofy/presentation/screens/forgot_password_screen.dart';
 import 'package:horofy/horofy/presentation/screens/level1_listen_screen.dart';
@@ -124,6 +125,13 @@ class AppRouter {
         return MaterialPageRoute(
           settings: settings,
           builder: (_) => OfflineWrapper(child: const ParentHomeScreen()),
+        );
+
+      case conversationsListScreen:
+        return MaterialPageRoute(
+          settings: settings,
+          builder: (_) =>
+              OfflineWrapper(child: const ConversationsListScreen()),
         );
 
       case chatScreen:

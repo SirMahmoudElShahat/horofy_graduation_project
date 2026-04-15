@@ -43,17 +43,23 @@ class ChildModel extends ChildEntity {
     if (name.trim().isEmpty) {
       throw Exception('اسم الطفل لا يمكن أن يكون فارغاً');
     }
-    return {
+    final body = {
       'name': name.trim(),
       'birthDate': birthDate,
-      'gender': gender,       // int as-is: 1 = boy, 0 = girl
+      'gender': gender, // int as-is: 1 = boy, 0 = girl
       'avatar': avatar,
       'level': level,
     };
+    print('=== Sending to Server ===');
+    print('Request Body: $body');
+    return body;
   }
 
   // Handles server response — gender may come back as int or string depending on server
   factory ChildModel.fromRemoteJson(Map<String, dynamic> json) {
+    print('=== ChildModel.fromRemoteJson ===');
+    print('Received JSON: $json');
+
     // Parse gender flexibly: server might return 1/0 or "male"/"female"
     int parsedGender;
     final rawGender = json['gender'];
@@ -66,12 +72,18 @@ class ChildModel extends ChildEntity {
     }
 
     final name = json['name']?.toString().trim() ?? '';
+    print('Parsed Name: "$name"');
+    print('Parsed Gender: $parsedGender');
+
     if (name.isEmpty) {
-      throw Exception('اسم الطفل مفقود في استجابة الخادم');
+      throw Exception('اسم الطفل مفقود في استجابة الخادم: ${json.toString()}');
     }
 
+    final remoteId = json['id']?.toString() ?? json['_id']?.toString();
+    print('Parsed Remote ID: $remoteId');
+
     return ChildModel(
-      remoteId: json['id']?.toString() ?? json['_id']?.toString(),
+      remoteId: remoteId,
       name: name,
       birthDate: json['birthDate'] ?? '',
       gender: parsedGender,

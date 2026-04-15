@@ -43,7 +43,7 @@ class ChildRepositoryImpl implements ChildRepository {
 
     for (final remote in remoteChildren) {
       // Find by remoteId
-      ChildModel? existing;
+      ChildEntity? existing;
       for (final local in localChildren) {
         if ((local as ChildModel).remoteId == remote.remoteId) {
           existing = local;
@@ -72,12 +72,9 @@ class ChildRepositoryImpl implements ChildRepository {
   @override
   Future<void> addChild(ChildEntity child) async {
     final model = _toModel(child);
-    try {
-      final created = await remoteDataSource.createChild(model);
-      await localDataSource.addChild(created);
-    } catch (_) {
-      await localDataSource.addChild(model);
-    }
+    // Always use remote API - no local fallback
+    final created = await remoteDataSource.createChild(model);
+    await localDataSource.addChild(created);
   }
 
   // ── UPDATE ────────────────────────────────────────────────
