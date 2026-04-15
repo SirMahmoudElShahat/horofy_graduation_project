@@ -27,14 +27,37 @@ class ChildRemoteDataSourceImpl implements ChildRemoteDataSource {
 
   @override
   Future<List<ChildModel>> getChildren() async {
-    final response = await dio.get(
-      AppApis.getChildren,
-      options: _authOptions,
-    );
+    final response = await dio.get(AppApis.getChildren, options: _authOptions);
+
+    print('=== Get Children Response ===');
+    print('Status Code: ${response.statusCode}');
+    print('Response Data: ${response.data}');
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      final List<dynamic> data = response.data['data'] ?? [];
-      return data.map((e) => ChildModel.fromRemoteJson(e)).toList();
+      // Handle nested response format
+      var data = response.data;
+
+      // First level unwrap: get the 'data' field
+      if (data is Map && data.containsKey('data')) {
+        data = data['data'];
+      }
+
+      // Second level unwrap: if data has a nested 'data' field and is a list, use that
+      if (data is Map && data.containsKey('data') && data['data'] is List) {
+        data = data['data'];
+      }
+
+      final List<dynamic> childList;
+      if (data is List) {
+        childList = data;
+      } else {
+        childList = [];
+      }
+
+      print('Parsed Children Count: ${childList.length}');
+      return childList
+          .map((e) => ChildModel.fromRemoteJson(e as Map<String, dynamic>))
+          .toList();
     }
 
     throw Exception(response.data['message'] ?? 'فشل تحميل الأطفال');
@@ -42,17 +65,62 @@ class ChildRemoteDataSourceImpl implements ChildRemoteDataSource {
 
   @override
   Future<ChildModel> createChild(ChildModel child) async {
-    final response = await dio.post(
-      AppApis.createChild,
-      options: _authOptions,
-      data: child.toRemoteJson(),
-    );
+    try {
+      final response = await dio.post(
+        AppApis.createChild,
+        options: _authOptions,
+        data: child.toRemoteJson(),
+      );
 
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      return ChildModel.fromRemoteJson(response.data['data']);
+      print('=== Create Child Response ===');
+      print('Status Code: ${response.statusCode}');
+      print('Response Data: ${response.data}');
+      print('Response Type: ${response.data.runtimeType}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        // Handle nested response format: response.data['data']['data'] contains actual child data
+        var data = response.data;
+
+        // First level unwrap: get the 'data' field
+        if (data is Map && data.containsKey('data')) {
+          data = data['data'];
+        }
+
+        // Second level unwrap: if data has a nested 'data' field, use that
+        if (data is Map && data.containsKey('data') && data['data'] is Map) {
+          data = data['data'];
+        }
+
+        if (data == null) {
+          throw Exception('استجابة الخادم لا تحتوي على بيانات الطفل');
+        }
+
+        print('Parsed Data: $data');
+        return ChildModel.fromRemoteJson(data as Map<String, dynamic>);
+      }
+
+      throw Exception(
+        response.data['message'] ??
+            'فشل إضافة الطفل (رمز: ${response.statusCode})',
+      );
+    } on DioException catch (e) {
+      // Handle Dio specific errors
+      print('=== Dio Exception ===');
+      print('Error: ${e.message}');
+      print('Response: ${e.response?.data}');
+
+      String errorMsg = 'فشل إضافة الطفل';
+      if (e.response != null) {
+        errorMsg = e.response?.data['message'] ?? e.message ?? errorMsg;
+      } else {
+        errorMsg = e.message ?? errorMsg;
+      }
+      throw Exception(errorMsg);
+    } catch (e) {
+      print('=== General Exception ===');
+      print('Error: $e');
+      throw Exception(e.toString());
     }
-
-    throw Exception(response.data['message'] ?? 'فشل إضافة الطفل');
   }
 
   @override
@@ -61,16 +129,31 @@ class ChildRemoteDataSourceImpl implements ChildRemoteDataSource {
 
     // Server expects numeric id in path: PUT /api/children/{id}
     final numericId = int.tryParse(child.remoteId!);
-    if (numericId == null) throw Exception('remoteId غير صالح: ${child.remoteId}');
+    if (numericId == null)
+      throw Exception('remoteId غير صالح: ${child.remoteId}');
 
-    final response = await dio.put(                        // PUT not PATCH
+    final response = await dio.put(
+      // PUT not PATCH
       AppApis.updateChild(numericId.toString()),
       options: _authOptions,
-      data: child.toRemoteJson(),                          // same body as create
+      data: child.toRemoteJson(), // same body as create
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return ChildModel.fromRemoteJson(response.data['data']);
+      // Handle nested response format: response.data['data'] contains actual child data
+      var data = response.data;
+
+      // First level unwrap: get the 'data' field
+      if (data is Map && data.containsKey('data')) {
+        data = data['data'];
+      }
+
+      // Second level unwrap: if data has a nested 'data' field, use that
+      if (data is Map && data.containsKey('data') && data['data'] is Map) {
+        data = data['data'];
+      }
+
+      return ChildModel.fromRemoteJson(data as Map<String, dynamic>);
     }
 
     throw Exception(response.data['message'] ?? 'فشل تعديل الطفل');
