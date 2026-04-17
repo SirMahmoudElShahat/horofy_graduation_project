@@ -42,8 +42,15 @@ class ChildCubit extends Cubit<ChildState> {
 
   // ── DELETE ────────────────────────────────────────────────
   Future<void> deleteChild(int id) async {
-    await deleteChildUseCase(id);
-    await loadChildren();
+    try {
+      emit(ChildDeleteLoading());
+      await deleteChildUseCase(id);
+      emit(ChildDeleteSuccess());
+      await loadChildren();
+    } catch (e) {
+      emit(ChildDeleteError(e.toString()));
+      await loadChildren();
+    }
   }
 
   // ── UPDATE ────────────────────────────────────────────────

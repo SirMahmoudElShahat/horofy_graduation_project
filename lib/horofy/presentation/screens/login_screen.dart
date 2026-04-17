@@ -59,10 +59,16 @@ class _LoginScreenState extends State<LoginScreen> {
           setState(() => _isLoading = false);
 
           if (state is LoginSuccess) {
+            // Always save token for current session use
+            CacheHelper.saveData('accessToken', state.user.token ?? '');
+            CacheHelper.saveData('userId', state.user.id);
+
             if (_remember) {
-              _saveLoginData(state.user.id, state.user.token ?? '');
+              // Also persist rememberMe flag for next launch
+              CacheHelper.saveData('rememberMe', true);
             } else {
-              _clearLoginData();
+              // Clear rememberMe so next launch goes to login
+              CacheHelper.saveData('rememberMe', false);
             }
 
             Navigator.pushNamedAndRemoveUntil(
@@ -70,6 +76,7 @@ class _LoginScreenState extends State<LoginScreen> {
               mainHomeScreen,
               (route) => false,
             );
+            
           } else if (state is AuthError) {
             customAppToast(context, 'خطأ', state.message, isError: true);
           }

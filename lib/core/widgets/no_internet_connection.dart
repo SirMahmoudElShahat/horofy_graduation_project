@@ -154,7 +154,7 @@ class _NoInternetConnectionState extends State<NoInternetConnection>
                 const SizedBox(height: 24),
                 _buildSlots(),
                 const SizedBox(height: 10),
-                Text('اسحب الحرف للمكان الصح ✏️', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Colors.grey.shade400)),
+                Text('✏️ اسحب الحرف للمكان الصحيح', style: TextStyle(fontFamily: 'Cairo', fontSize: 14, color: Colors.grey.shade400)),
                 const SizedBox(height: 20),
                 _buildBank(),
                 const Spacer(),
@@ -203,7 +203,7 @@ class _NoInternetConnectionState extends State<NoInternetConnection>
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, size: 15, color: Colors.orange.shade600),
         const SizedBox(width: 6),
-        Text('بدون إنترنت — العب واستنى الاتصال!', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.orange.shade700)),
+        Text('! بدون إنترنت — العب واستنى الاتصال', style: TextStyle(fontFamily: 'Cairo', fontSize: 13, color: Colors.orange.shade700)),
       ]),
     );
   }

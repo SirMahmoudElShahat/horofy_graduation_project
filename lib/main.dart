@@ -9,7 +9,6 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/data/datasources/auth_remote_datasource.dart';
 import 'package:horofy/horofy/data/datasources/chat_remote_datasource.dart';
-import 'package:horofy/horofy/data/datasources/child_local_datasource.dart';
 import 'package:horofy/horofy/data/datasources/child_remote_datasource.dart';
 import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/datasources/local_data_source.dart';
@@ -69,11 +68,9 @@ void main() async {
         /// children
         BlocProvider(
           create: (context) {
-            final localDataSource = ChildLocalDataSourceImpl();
             final remoteDataSource = ChildRemoteDataSourceImpl(dio: Dio());
 
             final repository = ChildRepositoryImpl(
-              localDataSource: localDataSource,
               remoteDataSource: remoteDataSource,
             );
 

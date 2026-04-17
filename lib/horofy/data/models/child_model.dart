@@ -83,6 +83,7 @@ class ChildModel extends ChildEntity {
     print('Parsed Remote ID: $remoteId');
 
     return ChildModel(
+      id: remoteId != null ? int.tryParse(remoteId) : null,
       remoteId: remoteId,
       name: name,
       birthDate: json['birthDate'] ?? '',
