@@ -36,6 +36,41 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
   ChildEntity? editingChild;
   bool isAdding = false;
 
+  DateTime? _parseBirthDate(String rawDate) {
+    final value = rawDate.trim();
+    if (value.isEmpty) return null;
+
+    final normalized = value.split(' ').first;
+
+    final slashParts = normalized.split('/');
+    if (slashParts.length == 3) {
+      final day = int.tryParse(slashParts[0]);
+      final month = int.tryParse(slashParts[1]);
+      final year = int.tryParse(slashParts[2]);
+      if (day != null && month != null && year != null) {
+        return DateTime(year, month, day);
+      }
+    }
+
+    final dashParts = normalized.split('-');
+    if (dashParts.length == 3) {
+      final year = int.tryParse(dashParts[0]);
+      final month = int.tryParse(dashParts[1]);
+      final day = int.tryParse(dashParts[2]);
+      if (day != null && month != null && year != null) {
+        return DateTime(year, month, day);
+      }
+    }
+
+    return null;
+  }
+
+  String _formatBirthDate(DateTime date) {
+    return "${date.day.toString().padLeft(2, '0')}/"
+        "${date.month.toString().padLeft(2, '0')}/"
+        "${date.year}";
+  }
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -44,18 +79,10 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
       if (arg is ChildEntity) {
         editingChild = arg;
         nameController.text = editingChild!.name;
-        dateController.text = editingChild!.birthDate;
-        try {
-          final parts = editingChild!.birthDate.split('/');
-          if (parts.length == 3) {
-            final day = int.tryParse(parts[0]);
-            final month = int.tryParse(parts[1]);
-            final year = int.tryParse(parts[2]);
-            if (day != null && month != null && year != null) {
-              selectedDate = DateTime(year, month, day);
-            }
-          }
-        } catch (_) {}
+        selectedDate = _parseBirthDate(editingChild!.birthDate);
+        dateController.text = selectedDate != null
+            ? _formatBirthDate(selectedDate!)
+            : editingChild!.birthDate;
         selectedGender = editingChild!.gender;
         selectedAvatar = _images.indexOf(editingChild!.avatar);
         setState(() {});
@@ -146,10 +173,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
               if (pickedDate != null) {
                 setState(() {
                   selectedDate = pickedDate;
-                  dateController.text =
-                      "${pickedDate.day.toString().padLeft(2, '0')}/"
-                      "${pickedDate.month.toString().padLeft(2, '0')}/"
-                      "${pickedDate.year}";
+                  dateController.text = _formatBirthDate(pickedDate);
                 });
               }
             },
