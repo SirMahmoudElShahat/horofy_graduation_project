@@ -11,16 +11,14 @@ import 'package:google_mlkit_digital_ink_recognition/google_mlkit_digital_ink_re
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 
-enum _Level5Step {
-  writeBa,
-  writeBaDuck,
-  writeBrOrange,
-}
+enum _Level5Step { writeBa, writeBaDuck, writeBrOrange }
 
 class Level5Screen extends StatefulWidget {
   const Level5Screen({super.key});
@@ -259,7 +257,9 @@ class _Level5ScreenState extends State<Level5Screen> {
           exercisesResultScreen,
           arguments: () async {
             if (_childId != 0) {
-              final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+              final duration = DateTime.now()
+                  .difference(_exerciseStartedAt)
+                  .inSeconds;
               context.read<SubmissionCubit>().submit(
                 childId: _childId,
                 level: 'level5',
@@ -270,9 +270,7 @@ class _Level5ScreenState extends State<Level5Screen> {
                 duration: duration,
                 totalItems: _targets.length,
                 mistakes: List.from(_mistakes),
-                metadata: {
-                  'targets': _targets.values.toList(),
-                },
+                metadata: {'targets': _targets.values.toList()},
               );
               await childCubit.updateLevel(_childId, 'level6');
             }
@@ -289,21 +287,18 @@ class _Level5ScreenState extends State<Level5Screen> {
     if (b.isEmpty) return a.length;
     final matrix = List.generate(
       a.length + 1,
-      (i) => List.generate(
-        b.length + 1,
-        (j) => j == 0 ? i : (i == 0 ? j : 0),
-      ),
+      (i) => List.generate(b.length + 1, (j) => j == 0 ? i : (i == 0 ? j : 0)),
     );
     for (int i = 1; i <= a.length; i++) {
       for (int j = 1; j <= b.length; j++) {
         matrix[i][j] = a[i - 1] == b[j - 1]
             ? matrix[i - 1][j - 1]
             : 1 +
-                [
-                  matrix[i - 1][j],
-                  matrix[i][j - 1],
-                  matrix[i - 1][j - 1],
-                ].reduce(min);
+                  [
+                    matrix[i - 1][j],
+                    matrix[i][j - 1],
+                    matrix[i - 1][j - 1],
+                  ].reduce(min);
       }
     }
     return matrix[a.length][b.length];
@@ -323,113 +318,122 @@ class _Level5ScreenState extends State<Level5Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: !_isModelReady
-          ? _buildLoadingView()
-          : SafeArea(
-              child: Stack(
-                children: [
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, childState) {
+        return LoadingOverlay(
+          isLoading: childState is ChildUpdateLoading,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            body: !_isModelReady
+                ? _buildLoadingView()
+                : SafeArea(
+                    child: Stack(
                       children: [
-                        _step == _Level5Step.writeBa
-                            ? Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Text(
-                                    _headerText(),
-                                    style: AppTextStyles.blackFont.copyWith(
-                                      fontSize: 35,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  ExercisesButton(
-                                    onPressed: _playBaSound,
-                                    buttonIcon: Icons.headphones,
-                                  ),
-                                ],
-                              )
-                            : const SizedBox(),
-                        SizedBox(
-                          height: _step == _Level5Step.writeBa ? 30 : 0,
-                        ),
-                        if (_step != _Level5Step.writeBa) ...[
-                          Image.asset(
-                            _stepImagePath(),
-                            height: 150,
-                            fit: BoxFit.contain,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.image_outlined,
-                              size: 80,
-                              color: Colors.grey,
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                        ],
-                        SizedBox(
-                          height: 110,
-                          child: Row(
+                        Center(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                textDirection: TextDirection.rtl,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  _buildWritingArea(),
-                                  if (_step != _Level5Step.writeBa)
-                                    Text(
-                                      _stepSuffix(),
-                                      style: AppTextStyles.blackFont.copyWith(
-                                        fontSize: 48,
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                              const SizedBox(width: 16),
-                              _isProcessing
-                                  ? const SizedBox(
-                                      width: 50,
-                                      height: 50,
-                                      child: CircularProgressIndicator(
-                                        color: AppColors.primary,
-                                        strokeWidth: 3,
-                                      ),
+                              _step == _Level5Step.writeBa
+                                  ? Row(
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
+                                      children: [
+                                        Text(
+                                          _headerText(),
+                                          style: AppTextStyles.blackFont
+                                              .copyWith(fontSize: 35),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        ExercisesButton(
+                                          onPressed: _playBaSound,
+                                          buttonIcon: Icons.headphones,
+                                        ),
+                                      ],
                                     )
-                                  : ExercisesButton(
-                                      buttonIcon: _hasStrokes
-                                          ? Icons.send_rounded
-                                          : Icons.draw,
-                                      onPressed:
-                                          (_hasStrokes &&
-                                              _isCorrectMatch != true)
-                                          ? _recognize
-                                          : () {},
+                                  : const SizedBox(),
+                              SizedBox(
+                                height: _step == _Level5Step.writeBa ? 30 : 0,
+                              ),
+                              if (_step != _Level5Step.writeBa) ...[
+                                Image.asset(
+                                  _stepImagePath(),
+                                  height: 150,
+                                  fit: BoxFit.contain,
+                                  errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.image_outlined,
+                                    size: 80,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 20),
+                              ],
+                              SizedBox(
+                                height: 110,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      textDirection: TextDirection.rtl,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        _buildWritingArea(),
+                                        if (_step != _Level5Step.writeBa)
+                                          Text(
+                                            _stepSuffix(),
+                                            style: AppTextStyles.blackFont
+                                                .copyWith(
+                                                  fontSize: 48,
+                                                  color: AppColors.primary,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                          ),
+                                      ],
                                     ),
+                                    const SizedBox(width: 16),
+                                    _isProcessing
+                                        ? const SizedBox(
+                                            width: 50,
+                                            height: 50,
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.primary,
+                                              strokeWidth: 3,
+                                            ),
+                                          )
+                                        : ExercisesButton(
+                                            buttonIcon: _hasStrokes
+                                                ? Icons.send_rounded
+                                                : Icons.draw,
+                                            onPressed:
+                                                (_hasStrokes &&
+                                                    _isCorrectMatch != true)
+                                                ? _recognize
+                                                : () {},
+                                          ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
+                        if (_hasStrokes)
+                          Positioned(
+                            top: 20,
+                            left: 20,
+                            child: ExercisesButton(
+                              buttonIcon: Icons.refresh,
+                              onPressed: _reset,
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                  if (_hasStrokes)
-                    Positioned(
-                      top: 20,
-                      left: 20,
-                      child: ExercisesButton(
-                        buttonIcon: Icons.refresh,
-                        onPressed: _reset,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          ),
+        );
+      },
     );
   }
 

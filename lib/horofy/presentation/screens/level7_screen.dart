@@ -9,8 +9,10 @@ import 'package:google_mlkit_digital_ink_recognition/google_mlkit_digital_ink_re
     show Ink;
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 
@@ -165,8 +167,8 @@ class _Level7ScreenState extends State<Level7Screen> {
 
       final isCorrect =
           normalizedBest.contains(normalizedTarget) ||
-              normalizedTarget.contains(normalizedBest) ||
-              _levenshtein(normalizedBest, normalizedTarget) <= 1;
+          normalizedTarget.contains(normalizedBest) ||
+          _levenshtein(normalizedBest, normalizedTarget) <= 1;
 
       setState(() {
         _recognizedText = best;
@@ -180,7 +182,9 @@ class _Level7ScreenState extends State<Level7Screen> {
         if (!mounted) return;
 
         if (_childId != 0) {
-          final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+          final duration = DateTime.now()
+              .difference(_exerciseStartedAt)
+              .inSeconds;
           context.read<SubmissionCubit>().submit(
             childId: _childId,
             level: 'level7',
@@ -222,21 +226,18 @@ class _Level7ScreenState extends State<Level7Screen> {
     if (b.isEmpty) return a.length;
     final matrix = List.generate(
       a.length + 1,
-      (i) => List.generate(
-        b.length + 1,
-        (j) => j == 0 ? i : (i == 0 ? j : 0),
-      ),
+      (i) => List.generate(b.length + 1, (j) => j == 0 ? i : (i == 0 ? j : 0)),
     );
     for (int i = 1; i <= a.length; i++) {
       for (int j = 1; j <= b.length; j++) {
         matrix[i][j] = a[i - 1] == b[j - 1]
             ? matrix[i - 1][j - 1]
             : 1 +
-                [
-                  matrix[i - 1][j],
-                  matrix[i][j - 1],
-                  matrix[i - 1][j - 1],
-                ].reduce(min);
+                  [
+                    matrix[i - 1][j],
+                    matrix[i][j - 1],
+                    matrix[i - 1][j - 1],
+                  ].reduce(min);
       }
     }
     return matrix[a.length][b.length];
@@ -256,74 +257,81 @@ class _Level7ScreenState extends State<Level7Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: !_isModelReady
-          ? _buildLoadingView()
-          : SafeArea(
-              child: Stack(
-                children: [
-                  Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, childState) {
+        return LoadingOverlay(
+          isLoading: childState is ChildUpdateLoading,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            body: !_isModelReady
+                ? _buildLoadingView()
+                : SafeArea(
+                    child: Stack(
                       children: [
-                        Image.asset(
-                          'assets/images/level7/batrek.png',
-                          width: 200,
-                          height: 200,
-                          errorBuilder: (_, __, ___) => const Icon(
-                            Icons.image_outlined,
-                            size: 100,
-                            color: Colors.grey,
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        SizedBox(
-                          height: 110,
-                          child: Row(
+                        Center(
+                          child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
-                              _buildWritingArea(),
-                              const SizedBox(width: 16),
-                              _isProcessing
-                                  ? const SizedBox(
-                                      width: 50,
-                                      height: 50,
-                                      child: CircularProgressIndicator(
-                                        color: AppColors.primary,
-                                        strokeWidth: 3,
-                                      ),
-                                    )
-                                  : ExercisesButton(
-                                      buttonIcon: _hasStrokes
-                                          ? Icons.send_rounded
-                                          : Icons.draw,
-                                      onPressed:
-                                          (_hasStrokes &&
-                                              _isCorrectMatch != true)
-                                          ? _recognize
-                                          : () {},
-                                    ),
+                              Image.asset(
+                                'assets/images/level7/batrek.png',
+                                width: 200,
+                                height: 200,
+                                errorBuilder: (_, __, ___) => const Icon(
+                                  Icons.image_outlined,
+                                  size: 100,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                height: 110,
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    _buildWritingArea(),
+                                    const SizedBox(width: 16),
+                                    _isProcessing
+                                        ? const SizedBox(
+                                            width: 50,
+                                            height: 50,
+                                            child: CircularProgressIndicator(
+                                              color: AppColors.primary,
+                                              strokeWidth: 3,
+                                            ),
+                                          )
+                                        : ExercisesButton(
+                                            buttonIcon: _hasStrokes
+                                                ? Icons.send_rounded
+                                                : Icons.draw,
+                                            onPressed:
+                                                (_hasStrokes &&
+                                                    _isCorrectMatch != true)
+                                                ? _recognize
+                                                : () {},
+                                          ),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                         ),
+                        if (_hasStrokes)
+                          Positioned(
+                            top: 20,
+                            left: 20,
+                            child: ExercisesButton(
+                              buttonIcon: Icons.refresh,
+                              onPressed: _reset,
+                            ),
+                          ),
                       ],
                     ),
                   ),
-                  if (_hasStrokes)
-                    Positioned(
-                      top: 20,
-                      left: 20,
-                      child: ExercisesButton(
-                        buttonIcon: Icons.refresh,
-                        onPressed: _reset,
-                      ),
-                    ),
-                ],
-              ),
-            ),
+          ),
+        );
+      },
     );
   }
 

@@ -3,7 +3,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:get/get.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -178,47 +180,58 @@ class _Level6ScreenState extends State<Level6Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            _allDone ? _buildSuccessView() : _buildSentenceView(),
-            if (_allDone)
-              Positioned(
-                top: 20,
-                right: 20,
-                child: ExercisesButton(
-                  buttonIcon: Icons.arrow_forward_sharp,
-                  onPressed: _onNext,
-                ),
-              ),
-            if (!_allDone)
-              Positioned(
-                bottom: 30,
-                left: 25,
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    if (_isListening)
-                      const SizedBox(
-                        width: 60,
-                        height: 60,
-                        child: CircularProgressIndicator(
-                          color: AppColors.primary,
-                          strokeWidth: 3,
-                        ),
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, childState) {
+        return LoadingOverlay(
+          isLoading: childState is ChildUpdateLoading,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            body: SafeArea(
+              child: Stack(
+                children: [
+                  _allDone ? _buildSuccessView() : _buildSentenceView(),
+                  if (_allDone)
+                    Positioned(
+                      top: 20,
+                      right: 20,
+                      child: ExercisesButton(
+                        buttonIcon: Icons.arrow_forward_sharp,
+                        onPressed: _onNext,
                       ),
-                    ExercisesButton(
-                      buttonIcon: _isListening ? Icons.stop_rounded : Icons.mic,
-                      onPressed: _isListening ? _stopListening : _startListening,
                     ),
-                  ],
-                ),
+                  if (!_allDone)
+                    Positioned(
+                      bottom: 30,
+                      left: 25,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          if (_isListening)
+                            const SizedBox(
+                              width: 60,
+                              height: 60,
+                              child: CircularProgressIndicator(
+                                color: AppColors.primary,
+                                strokeWidth: 3,
+                              ),
+                            ),
+                          ExercisesButton(
+                            buttonIcon: _isListening
+                                ? Icons.stop_rounded
+                                : Icons.mic,
+                            onPressed: _isListening
+                                ? _stopListening
+                                : _startListening,
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
               ),
-          ],
-        ),
-      ),
+            ),
+          ),
+        );
+      },
     );
   }
 

@@ -5,8 +5,10 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/horofy/domain/entities/mad_letter.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/level2_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/level2_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
@@ -96,8 +98,9 @@ class _Level2ScreenState extends State<Level2Screen> {
     final completed = pending.completedExerciseIds('level2');
     if (completed.isEmpty) return;
 
-    final nextIndex =
-        level2State.madLetters.indexWhere((l) => !completed.contains(l.id));
+    final nextIndex = level2State.madLetters.indexWhere(
+      (l) => !completed.contains(l.id),
+    );
 
     // nextIndex == -1 means all letters done — stay on last
     if (nextIndex != -1 && nextIndex != level2State.currentIndex) {
@@ -164,10 +167,9 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   void _onResult(SpeechRecognitionResult result, MadLetter letter) {
-    String spoken = _normalizeArabic(result.recognizedWords)
-        .replaceAll('حرف', '')
-        .replaceAll('الحرف', '')
-        .trim();
+    String spoken = _normalizeArabic(
+      result.recognizedWords,
+    ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
     if (spoken.isEmpty) return;
 
     final currentStep =
@@ -175,8 +177,9 @@ class _Level2ScreenState extends State<Level2Screen> {
 
     bool isCorrect;
     if (currentStep == Level2Step.practiceSpelling) {
-      final madWordLetter =
-          letter.wordLetters.firstWhere((wl) => wl.isMadLetter);
+      final madWordLetter = letter.wordLetters.firstWhere(
+        (wl) => wl.isMadLetter,
+      );
       final correct = _normalizeArabic(madWordLetter.letter);
       final letterAr = _normalizeArabic(letter.letterAr);
       isCorrect = spoken.contains(correct) || spoken.contains(letterAr);
@@ -219,10 +222,7 @@ class _Level2ScreenState extends State<Level2Screen> {
           duration: duration,
           totalItems: state.madLetters.length,
           mistakes: List.from(_currentMistakes),
-          metadata: {
-            'letterAr': letter.letterAr,
-            'word': letter.wordText,
-          },
+          metadata: {'letterAr': letter.letterAr, 'word': letter.wordText},
         );
         _attemptsCount = 0;
         _currentMistakes.clear();
@@ -262,7 +262,6 @@ class _Level2ScreenState extends State<Level2Screen> {
   Widget build(BuildContext context) {
     return MultiBlocListener(
       listeners: [
-        // When submissions load → try resume (Level2 may not be ready yet)
         BlocListener<SubmissionCubit, SubmissionState>(
           listener: (context, state) {
             if (state is SubmissionsLoaded) {
@@ -270,7 +269,6 @@ class _Level2ScreenState extends State<Level2Screen> {
             }
           },
         ),
-        // When Level2 loads → try resume (submissions may have arrived first)
         BlocListener<Level2Cubit, Level2State>(
           listener: (context, state) {
             if (state is Level2Loaded) {
@@ -279,27 +277,44 @@ class _Level2ScreenState extends State<Level2Screen> {
           },
         ),
       ],
-      child: BlocBuilder<Level2Cubit, Level2State>(
-        builder: (context, state) {
-          if (state is! Level2Loaded || state.currentMadLetter == null) {
-            return const Scaffold(
-              backgroundColor: Color(0xFFFAEFE4),
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+      child: BlocBuilder<SubmissionCubit, SubmissionState>(
+        builder: (context, submissionState) {
+          return BlocBuilder<ChildCubit, ChildState>(
+            builder: (context, childState) {
+              final isLoading =
+                  submissionState is SubmissionLoading ||
+                  submissionState is SubmissionInitial ||
+                  childState is ChildUpdateLoading;
 
-          final letter = state.currentMadLetter!;
+              return BlocBuilder<Level2Cubit, Level2State>(
+                builder: (context, state) {
+                  if (state is! Level2Loaded ||
+                      state.currentMadLetter == null) {
+                    return const Scaffold(
+                      backgroundColor: Color(0xFFFAEFE4),
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
 
-          return Scaffold(
-            backgroundColor: const Color(0xFFFAEFE4),
-            body: SafeArea(
-              child: Stack(
-                children: [
-                  _buildStepContent(state, letter),
-                  _buildNextButton(state, letter),
-                ],
-              ),
-            ),
+                  final letter = state.currentMadLetter!;
+
+                  return LoadingOverlay(
+                    isLoading: isLoading,
+                    child: Scaffold(
+                      backgroundColor: const Color(0xFFFAEFE4),
+                      body: SafeArea(
+                        child: Stack(
+                          children: [
+                            _buildStepContent(state, letter),
+                            _buildNextButton(state, letter),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           );
         },
       ),
@@ -633,11 +648,7 @@ class _Level2ScreenState extends State<Level2Screen> {
                 border: Border.all(color: Colors.grey.shade300),
               ),
               child: const Center(
-                child: Icon(
-                  Icons.image_outlined,
-                  size: 80,
-                  color: Colors.grey,
-                ),
+                child: Icon(Icons.image_outlined, size: 80, color: Colors.grey),
               ),
             ),
           ),

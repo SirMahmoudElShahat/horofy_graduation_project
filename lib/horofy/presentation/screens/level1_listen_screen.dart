@@ -217,73 +217,86 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
       },
       child: BlocBuilder<SubmissionCubit, SubmissionState>(
         builder: (context, state) {
-          final isLoading = state is SubmissionLoading || state is SubmissionInitial;
+          final isLoading =
+              state is SubmissionLoading ||
+              state is SubmissionInitial ||
+              state is SubmissionSending;
 
           if (_letters.isEmpty && !isLoading) {
-            return const Scaffold(
-              body: Center(child: Text('لا توجد بيانات')),
-            );
+            return const Scaffold(body: Center(child: Text('لا توجد بيانات')));
           }
-          
-          final currentLetter = _letters.isNotEmpty ? _letters[_currentIndex] : null;
+
+          final currentLetter = _letters.isNotEmpty
+              ? _letters[_currentIndex]
+              : null;
 
           return LoadingOverlay(
             isLoading: isLoading,
             child: Scaffold(
               backgroundColor: AppColors.background,
-              body: currentLetter == null ? const Center(child: CircularProgressIndicator()) : Stack(
-                children: [
-                  if (!_isPracticeMode)
-                    Positioned(
-                      top: 35,
-                      right: 25,
-                      child: ExercisesButton(
-                        onPressed: () => setState(() => _isPracticeMode = true),
-                        buttonIcon: Icons.arrow_forward_sharp,
-                      ),
-                    ),
-                  Positioned(
-                    child: Center(child: Image.asset(currentLetter.image)),
-                  ),
-                  Positioned(
-                    bottom: 30,
-                    left: 25,
-                    child: Stack(
-                      alignment: Alignment.center,
+              body: currentLetter == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : Stack(
                       children: [
-                        if (_isPracticeMode && _speechToText.isListening)
-                          const SizedBox(
-                            width: 60,
-                            height: 60,
-                            child: CircularProgressIndicator(
-                              color: AppColors.primary,
-                              strokeWidth: 3,
+                        if (!_isPracticeMode)
+                          Positioned(
+                            top: 35,
+                            right: 25,
+                            child: ExercisesButton(
+                              onPressed: () =>
+                                  setState(() => _isPracticeMode = true),
+                              buttonIcon: Icons.arrow_forward_sharp,
                             ),
                           ),
-                        ExercisesButton(
-                          buttonIcon: _isPracticeMode
-                              ? (_speechToText.isListening
-                                  ? Icons.stop_rounded
-                                  : Icons.mic)
-                              : Icons.headphones_rounded,
-                          onPressed: _isPracticeMode
-                              ? (_speechToText.isListening
-                                  ? _stopListening
-                                  : (_speechEnabled ? _startListening : () {}))
-                              : () async {
-                                  String soundPath = currentLetter.soundName;
-                                  if (soundPath.startsWith('assets/')) {
-                                    soundPath = soundPath.substring(7);
-                                  }
-                                  await _player.stop();
-                                  await _player.play(AssetSource(soundPath));
-                                },
+                        Positioned(
+                          child: Center(
+                            child: Image.asset(currentLetter.image),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 30,
+                          left: 25,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              if (_isPracticeMode && _speechToText.isListening)
+                                const SizedBox(
+                                  width: 60,
+                                  height: 60,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.primary,
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                              ExercisesButton(
+                                buttonIcon: _isPracticeMode
+                                    ? (_speechToText.isListening
+                                          ? Icons.stop_rounded
+                                          : Icons.mic)
+                                    : Icons.headphones_rounded,
+                                onPressed: _isPracticeMode
+                                    ? (_speechToText.isListening
+                                          ? _stopListening
+                                          : (_speechEnabled
+                                                ? _startListening
+                                                : () {}))
+                                    : () async {
+                                        String soundPath =
+                                            currentLetter.soundName;
+                                        if (soundPath.startsWith('assets/')) {
+                                          soundPath = soundPath.substring(7);
+                                        }
+                                        await _player.stop();
+                                        await _player.play(
+                                          AssetSource(soundPath),
+                                        );
+                                      },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                ],
-              ),
             ),
           );
         },

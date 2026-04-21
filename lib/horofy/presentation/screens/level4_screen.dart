@@ -5,7 +5,9 @@ import 'package:get/get.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -186,17 +188,17 @@ class _Level4ScreenState extends State<Level4Screen>
   void _onSpeechResult(SpeechRecognitionResult result) {
     if (!mounted || _isCorrect) return;
 
-    String spoken = _normalize(result.recognizedWords)
-        .replaceAll('حرف', '')
-        .replaceAll('الحرف', '')
-        .trim();
+    String spoken = _normalize(
+      result.recognizedWords,
+    ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
     if (spoken.isEmpty) return;
 
     bool isCorrect = false;
     if (_wordIndex == 0) {
       isCorrect = spoken.contains('بيت') || spoken.contains('بيتا');
     } else {
-      isCorrect = spoken.contains('بقره') ||
+      isCorrect =
+          spoken.contains('بقره') ||
           spoken.contains('بقرة') ||
           spoken.contains('بقر');
     }
@@ -208,8 +210,7 @@ class _Level4ScreenState extends State<Level4Screen>
 
     setState(() {
       _isCorrect = isCorrect;
-      _statusMessage =
-          isCorrect ? 'ممتاز! ✅' : 'حاول تاني 🔄  سمعت: $spoken';
+      _statusMessage = isCorrect ? 'ممتاز! ✅' : 'حاول تاني 🔄  سمعت: $spoken';
     });
 
     if (isCorrect) {
@@ -250,7 +251,9 @@ class _Level4ScreenState extends State<Level4Screen>
       exercisesResultScreen,
       arguments: () async {
         if (_childId != 0) {
-          final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+          final duration = DateTime.now()
+              .difference(_exerciseStartedAt)
+              .inSeconds;
           submissionCubit.submit(
             childId: _childId,
             level: 'level4',
@@ -275,11 +278,18 @@ class _Level4ScreenState extends State<Level4Screen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: _step == _Level4Step.choose
-          ? _buildChooseStep()
-          : _buildRecordStep(),
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, childState) {
+        return LoadingOverlay(
+          isLoading: childState is ChildUpdateLoading,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            body: _step == _Level4Step.choose
+                ? _buildChooseStep()
+                : _buildRecordStep(),
+          ),
+        );
+      },
     );
   }
 
@@ -376,8 +386,11 @@ class _Level4ScreenState extends State<Level4Screen>
                 word.imagePath,
                 height: 220,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) =>
-                    const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
+                errorBuilder: (_, __, ___) => const Icon(
+                  Icons.image_outlined,
+                  size: 100,
+                  color: Colors.grey,
+                ),
               ),
             ],
           ),

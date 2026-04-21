@@ -4,7 +4,9 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 
 // ============================================================
@@ -272,8 +274,7 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-    final double boxSize =
-        (screenSize.shortestSide * 0.75).clamp(200.0, 350.0);
+    final double boxSize = (screenSize.shortestSide * 0.75).clamp(200.0, 350.0);
     final canvasWidth = boxSize;
     final canvasHeight = boxSize;
 
@@ -285,84 +286,94 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
       });
     }
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFFAEFE4),
-      body: Stack(
-        children: [
-          SafeArea(
-            child: Column(
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, childState) {
+        return LoadingOverlay(
+          isLoading: childState is ChildUpdateLoading,
+          child: Scaffold(
+            backgroundColor: const Color(0xFFFAEFE4),
+            body: Stack(
               children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 12,
-                  ),
-                  child: Row(
+                SafeArea(
+                  child: Column(
                     children: [
-                      const SizedBox(width: 48),
-                      const Expanded(
-                        child: Text(
-                          'مشّي إصبعك على الحرف 👆',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Cairo-ExtraBold',
-                            fontSize: 18,
-                            color: Colors.black45,
-                          ),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          children: [
+                            const SizedBox(width: 48),
+                            const Expanded(
+                              child: Text(
+                                'مشّي إصبعك على الحرف 👆',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontFamily: 'Cairo-ExtraBold',
+                                  fontSize: 18,
+                                  color: Colors.black45,
+                                ),
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(
+                                Icons.refresh,
+                                color: Colors.black38,
+                                size: 28,
+                              ),
+                              onPressed: _reset,
+                            ),
+                          ],
                         ),
                       ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.refresh,
-                          color: Colors.black38,
-                          size: 28,
-                        ),
-                        onPressed: _reset,
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(
-                  child: Align(
-                    alignment: Alignment.bottomCenter,
-                    child: Builder(
-                      builder: (ctx) => Listener(
-                        onPointerMove: (event) {
-                          final box = ctx.findRenderObject() as RenderBox?;
-                          if (box != null) _onPointerMove(event, box);
-                        },
-                        child: SizedBox(
-                          width: canvasWidth,
-                          height: canvasHeight,
-                          child: CustomPaint(
-                            painter: LetterTracePainter(
-                              letter: _currentLetter,
-                              touchPoints: List.unmodifiable(_touchPoints),
-                              traceColor: const Color(0xFF774019),
-                              brushRadius: _brushRadius,
-                              canvasWidth: canvasWidth,
-                              canvasHeight: canvasHeight,
+                      Expanded(
+                        child: Align(
+                          alignment: Alignment.bottomCenter,
+                          child: Builder(
+                            builder: (ctx) => Listener(
+                              onPointerMove: (event) {
+                                final box =
+                                    ctx.findRenderObject() as RenderBox?;
+                                if (box != null) _onPointerMove(event, box);
+                              },
+                              child: SizedBox(
+                                width: canvasWidth,
+                                height: canvasHeight,
+                                child: CustomPaint(
+                                  painter: LetterTracePainter(
+                                    letter: _currentLetter,
+                                    touchPoints: List.unmodifiable(
+                                      _touchPoints,
+                                    ),
+                                    traceColor: const Color(0xFF774019),
+                                    brushRadius: _brushRadius,
+                                    canvasWidth: canvasWidth,
+                                    canvasHeight: canvasHeight,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
+                      const SizedBox(height: 20),
+                    ],
                   ),
                 ),
-                const SizedBox(height: 20),
+                if (_completed)
+                  IgnorePointer(
+                    child: SizedBox(
+                      width: screenSize.width,
+                      height: screenSize.height,
+                      child: CustomPaint(painter: _ConfettiPainter(_particles)),
+                    ),
+                  ),
               ],
             ),
           ),
-          if (_completed)
-            IgnorePointer(
-              child: SizedBox(
-                width: screenSize.width,
-                height: screenSize.height,
-                child: CustomPaint(painter: _ConfettiPainter(_particles)),
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

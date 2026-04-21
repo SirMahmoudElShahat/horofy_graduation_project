@@ -69,6 +69,7 @@ class ChildCubit extends Cubit<ChildState> {
   // Calls use case directly to avoid ChildUpdateLoading flickering the UI
   Future<void> updateLevel(int childId, String newLevel) async {
     try {
+      emit(ChildUpdateLoading());
       final children = await getChildrenUseCase();
       ChildEntity? found;
       for (final c in children) {

@@ -4,7 +4,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
@@ -14,13 +16,29 @@ class _LetterData {
   final String letter;
   final String image;
   final String sound;
-  const _LetterData({required this.letter, required this.image, required this.sound});
+  const _LetterData({
+    required this.letter,
+    required this.image,
+    required this.sound,
+  });
 }
 
 const _wordLetters = [
-  _LetterData(letter: 'ل', image: 'assets/images/letters/23.png', sound: 'assets/sounds/letter_sound/lam.mp3'),
-  _LetterData(letter: 'ع', image: 'assets/images/letters/18.png', sound: 'assets/sounds/letter_sound/ayn.mp3'),
-  _LetterData(letter: 'ب', image: 'assets/images/letters/2.png', sound: 'assets/sounds/letter_sound/ba.mp3'),
+  _LetterData(
+    letter: 'ل',
+    image: 'assets/images/letters/23.png',
+    sound: 'assets/sounds/letter_sound/lam.mp3',
+  ),
+  _LetterData(
+    letter: 'ع',
+    image: 'assets/images/letters/18.png',
+    sound: 'assets/sounds/letter_sound/ayn.mp3',
+  ),
+  _LetterData(
+    letter: 'ب',
+    image: 'assets/images/letters/2.png',
+    sound: 'assets/sounds/letter_sound/ba.mp3',
+  ),
 ];
 
 const _wordText = 'لَعِب';
@@ -70,7 +88,8 @@ class _Level3ScreenState extends State<Level3Screen> {
     _speechEnabled = await _stt.initialize(
       onError: (_) => setState(() => _isListening = false),
       onStatus: (s) {
-        if (s == 'notListening' && mounted) setState(() => _isListening = false);
+        if (s == 'notListening' && mounted)
+          setState(() => _isListening = false);
       },
     );
     if (mounted) setState(() {});
@@ -85,9 +104,14 @@ class _Level3ScreenState extends State<Level3Screen> {
 
   String _normalize(String text) {
     return text
-        .replaceAll('أ', 'ا').replaceAll('إ', 'ا').replaceAll('آ', 'ا')
-        .replaceAll('ى', 'ي').replaceAll('ة', 'ه')
-        .replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '').trim().toLowerCase();
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه')
+        .replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '')
+        .trim()
+        .toLowerCase();
   }
 
   Future<void> _playAsset(String path) async {
@@ -166,8 +190,9 @@ class _Level3ScreenState extends State<Level3Screen> {
   }
 
   void _onResult(SpeechRecognitionResult result) {
-    String spoken = _normalize(result.recognizedWords)
-        .replaceAll('حرف', '').replaceAll('الحرف', '').trim();
+    String spoken = _normalize(
+      result.recognizedWords,
+    ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
     if (spoken.isEmpty) return;
 
     final isCorrect =
@@ -189,16 +214,18 @@ class _Level3ScreenState extends State<Level3Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            _buildStepContent(),
-            _buildNextButton(),
-          ],
-        ),
-      ),
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, childState) {
+        return LoadingOverlay(
+          isLoading: childState is ChildUpdateLoading,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            body: SafeArea(
+              child: Stack(children: [_buildStepContent(), _buildNextButton()]),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -239,7 +266,10 @@ class _Level3ScreenState extends State<Level3Screen> {
         children: [
           Text(
             'استمع للحروف 🔊',
-            style: AppTextStyles.greyFont.copyWith(fontSize: 22, fontWeight: FontWeight.bold),
+            style: AppTextStyles.greyFont.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const SizedBox(height: 28),
           Row(
@@ -251,12 +281,22 @@ class _Level3ScreenState extends State<Level3Screen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 90, height: 90,
+                      width: 90,
+                      height: 90,
                       decoration: BoxDecoration(
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.grey.shade300, width: 1),
-                        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 3))],
+                        border: Border.all(
+                          color: Colors.grey.shade300,
+                          width: 1,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.06),
+                            blurRadius: 8,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(14),
@@ -264,9 +304,19 @@ class _Level3ScreenState extends State<Level3Screen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(wl.letter, style: AppTextStyles.blackFont.copyWith(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.primary)),
+                    Text(
+                      wl.letter,
+                      style: AppTextStyles.blackFont.copyWith(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.primary,
+                      ),
+                    ),
                     const SizedBox(height: 8),
-                    ExercisesButton(buttonIcon: Icons.headphones_rounded, onPressed: () => _playAsset(wl.sound)),
+                    ExercisesButton(
+                      buttonIcon: Icons.headphones_rounded,
+                      onPressed: () => _playAsset(wl.sound),
+                    ),
                   ],
                 ),
               );
@@ -282,15 +332,35 @@ class _Level3ScreenState extends State<Level3Screen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text('انطق الكلمة 🎤', style: AppTextStyles.greyFont.copyWith(fontSize: 22, fontWeight: FontWeight.bold)),
+          Text(
+            'انطق الكلمة 🎤',
+            style: AppTextStyles.greyFont.copyWith(
+              fontSize: 22,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
           const SizedBox(height: 24),
-          Text(_wordText, style: AppTextStyles.blackFont.copyWith(fontSize: 72, fontWeight: FontWeight.bold, color: AppColors.primary)),
+          Text(
+            _wordText,
+            style: AppTextStyles.blackFont.copyWith(
+              fontSize: 72,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
+          ),
           const SizedBox(height: 32),
           Stack(
             alignment: Alignment.center,
             children: [
               if (_isListening)
-                const SizedBox(width: 70, height: 70, child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 3)),
+                const SizedBox(
+                  width: 70,
+                  height: 70,
+                  child: CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 3,
+                  ),
+                ),
               ExercisesButton(
                 buttonIcon: _isListening ? Icons.stop_rounded : Icons.mic,
                 onPressed: _isListening ? _stopListening : _startListening,
@@ -303,13 +373,28 @@ class _Level3ScreenState extends State<Level3Screen> {
               opacity: 1,
               duration: const Duration(milliseconds: 300),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: _isCorrect ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: _isCorrect ? Colors.green.withOpacity(0.4) : Colors.red.withOpacity(0.4)),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 20,
+                  vertical: 12,
                 ),
-                child: Text(_statusMessage, style: AppTextStyles.blackFont.copyWith(fontSize: 16, color: _isCorrect ? Colors.green : Colors.red)),
+                decoration: BoxDecoration(
+                  color: _isCorrect
+                      ? Colors.green.withOpacity(0.1)
+                      : Colors.red.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isCorrect
+                        ? Colors.green.withOpacity(0.4)
+                        : Colors.red.withOpacity(0.4),
+                  ),
+                ),
+                child: Text(
+                  _statusMessage,
+                  style: AppTextStyles.blackFont.copyWith(
+                    fontSize: 16,
+                    color: _isCorrect ? Colors.green : Colors.red,
+                  ),
+                ),
               ),
             ),
         ],
@@ -322,14 +407,30 @@ class _Level3ScreenState extends State<Level3Screen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(_wordText, style: AppTextStyles.blackFont.copyWith(fontSize: 40, fontWeight: FontWeight.bold, color: AppColors.primary)),
+          Text(
+            _wordText,
+            style: AppTextStyles.blackFont.copyWith(
+              fontSize: 40,
+              fontWeight: FontWeight.bold,
+              color: AppColors.primary,
+            ),
+          ),
           const SizedBox(height: 24),
           Image.asset(
-            _wordImagePath, height: 220, fit: BoxFit.contain,
+            _wordImagePath,
+            height: 220,
+            fit: BoxFit.contain,
             errorBuilder: (_, __, ___) => Container(
-              width: 220, height: 220,
-              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), border: Border.all(color: Colors.grey.shade300)),
-              child: const Center(child: Icon(Icons.image_outlined, size: 80, color: Colors.grey)),
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: const Center(
+                child: Icon(Icons.image_outlined, size: 80, color: Colors.grey),
+              ),
             ),
           ),
         ],

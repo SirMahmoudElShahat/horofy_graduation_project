@@ -14,6 +14,8 @@ class SubmissionLoading extends SubmissionState {}
 
 class SubmissionSuccess extends SubmissionState {}
 
+class SubmissionSending extends SubmissionState {}
+
 class SubmissionError extends SubmissionState {
   final String message;
 
@@ -46,13 +48,10 @@ class SubmissionsLoaded extends SubmissionState {
   /// Used by levels to know where the child left off.
   Set<int> completedExerciseIds(String level, {String? exerciseType}) {
     return submissionsForLevel(
-          level,
-          status: 'pass',
-          exerciseType: exerciseType,
-        )
-        .map((s) => s.exerciseId ?? 0)
-        .where((id) => id > 0)
-        .toSet();
+      level,
+      status: 'pass',
+      exerciseType: exerciseType,
+    ).map((s) => s.exerciseId ?? 0).where((id) => id > 0).toSet();
   }
 
   /// Returns true if the given level has at least one passed submission.

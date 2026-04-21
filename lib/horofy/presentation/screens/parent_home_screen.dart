@@ -10,6 +10,7 @@ import 'package:horofy/horofy/domain/entities/child_entity.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/widgets/custom_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ParentHomeScreen extends StatelessWidget {
   const ParentHomeScreen({super.key});
@@ -87,91 +88,114 @@ class ParentHomeScreen extends StatelessWidget {
         textDirection: TextDirection.rtl,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'اختر الطفل',
-                style: AppTextStyles.blackFont.copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'اختر الطفل',
+                  style: AppTextStyles.blackFont.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 20),
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: children.length,
-                itemBuilder: (_, i) {
-                  final child = children[i];
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () {
-                      Navigator.pop(context);
-                      // هنا هتقولي إيه اللي يحصل بعد اختيار الطفل
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  child.name,
-                                  textAlign: TextAlign.right,
-                                  style: AppTextStyles.blackFont.copyWith(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  levelEnToArabic(child.level),
-                                  textAlign: TextAlign.right,
-                                  style: AppTextStyles.greyFont.copyWith(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
+                const SizedBox(height: 20),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: children.length,
+                  itemBuilder: (_, i) {
+                    final child = children[i];
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () async {
+                        Navigator.pop(context);
+                
+                        final token = CacheHelper.getString('accessToken');
+                        final childId = child.id;
+                
+                        if (token == null || token.isEmpty) {
+                          print("No token found");
+                          return;
+                        }
+                
+                        final url =
+                            'https://dyslexia-desgraphia.netlify.app/?childId=$childId&token=$token';
+                
+                        await openUrl(url);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
-                          ),
-                          const SizedBox(width: 14),
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundImage: AssetImage(child.avatar),
-                          ),
-                        ],
+                          ],
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    child.name,
+                                    textAlign: TextAlign.right,
+                                    style: AppTextStyles.blackFont.copyWith(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    levelEnToArabic(child.level),
+                                    textAlign: TextAlign.right,
+                                    style: AppTextStyles.greyFont.copyWith(
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundImage: AssetImage(child.avatar),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ],
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  /// Open a URL in the default browser
+  Future<void> openUrl(String url) async {
+    final Uri uri = Uri.parse(url);
+
+    if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
+      throw 'Could not launch $url';
+    }
   }
 
   /// Show logout confirmation dialog
