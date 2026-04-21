@@ -13,13 +13,13 @@ import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/core/widgets/loading_widget.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 
-// ── Step enum ─────────────────────────────────────────────────────────────────
 enum _Level5Step {
-  writeBa, // Step 1: write ب alone
-  writeBaDuck, // Step 2: write ب next to بطه image (suffix: طه)
-  writeBrOrange, // Step 3: write بر next to برتقالة image (suffix: تقالة)
+  writeBa,
+  writeBaDuck,
+  writeBrOrange,
 }
 
 class Level5Screen extends StatefulWidget {
@@ -30,22 +30,17 @@ class Level5Screen extends StatefulWidget {
 }
 
 class _Level5ScreenState extends State<Level5Screen> {
-  // ── ML Kit ────────────────────────────────────────────────
   final DigitalInkRecognizer _recognizer = DigitalInkRecognizer(
     languageCode: 'ar',
   );
   final ModelManager _modelManager = DigitalInkRecognizerModelManager();
-
-  // ── Audio ─────────────────────────────────────────────────
   final AudioPlayer _player = AudioPlayer();
 
-  // ── Drawing ───────────────────────────────────────────────
   final ml_ink.Ink _ink = ml_ink.Ink();
   List<StrokePoint> _currentStroke = [];
   final List<List<Offset>> _offsetStrokes = [];
   List<Offset> _currentOffsetStroke = [];
 
-  // ── State ─────────────────────────────────────────────────
   bool _hasStrokes = false;
   bool _isProcessing = false;
   String _recognizedText = '';
@@ -53,10 +48,12 @@ class _Level5ScreenState extends State<Level5Screen> {
   bool? _isCorrectMatch;
   int _childId = 0;
   bool _isModelReady = false;
+  int _attemptsCount = 0;
+  final List<String> _mistakes = [];
+  DateTime _exerciseStartedAt = DateTime.now();
 
   _Level5Step _step = _Level5Step.writeBa;
 
-  // ── Target words per step ─────────────────────────────────
   static const _targets = {
     _Level5Step.writeBa: 'ب',
     _Level5Step.writeBaDuck: 'ب',
@@ -83,7 +80,7 @@ class _Level5ScreenState extends State<Level5Screen> {
     if (!isDownloaded) {
       await _modelManager.downloadModel('ar');
     }
-    // warm-up
+
     try {
       final dummyInk = ml_ink.Ink();
       dummyInk.strokes.add(
@@ -106,13 +103,11 @@ class _Level5ScreenState extends State<Level5Screen> {
     super.dispose();
   }
 
-  // ── Play Ba sound ─────────────────────────────────────────
   Future<void> _playBaSound() async {
     await _player.stop();
     await _player.play(AssetSource('sounds/letter_name/ba.mp3'));
   }
 
-  // ── Normalize ─────────────────────────────────────────────
   String _normalize(String text) {
     return text
         .replaceAll('أ', 'ا')
@@ -124,7 +119,6 @@ class _Level5ScreenState extends State<Level5Screen> {
         .trim();
   }
 
-  // ── Pointer Events ────────────────────────────────────────
   void _onPointerDown(PointerDownEvent e, RenderBox box) {
     if (_showResult) {
       _ink.strokes.clear();
@@ -164,7 +158,6 @@ class _Level5ScreenState extends State<Level5Screen> {
     setState(() {});
   }
 
-  // ── Reset drawing only ────────────────────────────────────
   void _reset() {
     setState(() {
       _ink.strokes.clear();
@@ -179,10 +172,10 @@ class _Level5ScreenState extends State<Level5Screen> {
     });
   }
 
-  // ── Recognize and handle per-step logic ───────────────────
   Future<void> _recognize() async {
-    if (_ink.strokes.isEmpty || _isProcessing || _isCorrectMatch == true)
+    if (_ink.strokes.isEmpty || _isProcessing || _isCorrectMatch == true) {
       return;
+    }
 
     setState(() => _isProcessing = true);
 
@@ -190,6 +183,8 @@ class _Level5ScreenState extends State<Level5Screen> {
       final candidates = await _recognizer.recognize(_ink);
 
       if (candidates.isEmpty) {
+        _attemptsCount++;
+        _mistakes.add(_currentTarget);
         _showError('لم يتم التعرف على الكتابة، حاول تاني');
         setState(() => _isProcessing = false);
         return;
@@ -217,21 +212,21 @@ class _Level5ScreenState extends State<Level5Screen> {
         if (!mounted) return;
         _navigateOnCorrect();
       } else {
-        _showError('خطأ — كتبت: $best، المطلوب: $_currentTarget');
+        _attemptsCount++;
+        _mistakes.add(best);
+        _showError('خطأ - كتبت: $best، المطلوب: $_currentTarget');
       }
-    } catch (e) {
+    } catch (_) {
       setState(() => _isProcessing = false);
       _showError('حدث خطأ، حاول تاني');
     }
   }
 
-  // ── Navigate based on current step ───────────────────────
   void _navigateOnCorrect() {
     final navigator = Navigator.of(context);
-    final cubit = context.read<ChildCubit>();
+    final childCubit = context.read<ChildCubit>();
 
     switch (_step) {
-      // Step 1 done → result screen → come back to step 2 (duck)
       case _Level5Step.writeBa:
         Navigator.pushNamed(
           context,
@@ -245,8 +240,6 @@ class _Level5ScreenState extends State<Level5Screen> {
           },
         );
         break;
-
-      // Step 2 done → result screen → come back to step 3 (orange)
       case _Level5Step.writeBaDuck:
         Navigator.pushNamed(
           context,
@@ -260,15 +253,28 @@ class _Level5ScreenState extends State<Level5Screen> {
           },
         );
         break;
-
-      // Step 3 done → upgrade level → result screen → back to levels
       case _Level5Step.writeBrOrange:
         Navigator.pushNamed(
           context,
           exercisesResultScreen,
           arguments: () async {
             if (_childId != 0) {
-              await cubit.updateLevel(_childId, 'level6');
+              final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+              context.read<SubmissionCubit>().submit(
+                childId: _childId,
+                level: 'level5',
+                exerciseType: 'writing',
+                exerciseId: 1,
+                status: 'pass',
+                attemptsCount: _attemptsCount,
+                duration: duration,
+                totalItems: _targets.length,
+                mistakes: List.from(_mistakes),
+                metadata: {
+                  'targets': _targets.values.toList(),
+                },
+              );
+              await childCubit.updateLevel(_childId, 'level6');
             }
             navigator.popUntil(ModalRoute.withName(childLevelsScreen));
           },
@@ -277,25 +283,27 @@ class _Level5ScreenState extends State<Level5Screen> {
     }
   }
 
-  // ── Levenshtein distance for fuzzy match ─────────────────
   int _levenshtein(String a, String b) {
     if (a == b) return 0;
     if (a.isEmpty) return b.length;
     if (b.isEmpty) return a.length;
     final matrix = List.generate(
       a.length + 1,
-      (i) => List.generate(b.length + 1, (j) => j == 0 ? i : (i == 0 ? j : 0)),
+      (i) => List.generate(
+        b.length + 1,
+        (j) => j == 0 ? i : (i == 0 ? j : 0),
+      ),
     );
     for (int i = 1; i <= a.length; i++) {
       for (int j = 1; j <= b.length; j++) {
         matrix[i][j] = a[i - 1] == b[j - 1]
             ? matrix[i - 1][j - 1]
             : 1 +
-                  [
-                    matrix[i - 1][j],
-                    matrix[i][j - 1],
-                    matrix[i - 1][j - 1],
-                  ].reduce(min);
+                [
+                  matrix[i - 1][j],
+                  matrix[i][j - 1],
+                  matrix[i - 1][j - 1],
+                ].reduce(min);
       }
     }
     return matrix[a.length][b.length];
@@ -313,9 +321,6 @@ class _Level5ScreenState extends State<Level5Screen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  BUILD
-  // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -330,7 +335,6 @@ class _Level5ScreenState extends State<Level5Screen> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.center,
                       children: [
-                        // ── Header row: title + headphone ────────────
                         _step == _Level5Step.writeBa
                             ? Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
@@ -348,9 +352,10 @@ class _Level5ScreenState extends State<Level5Screen> {
                                   ),
                                 ],
                               )
-                            : SizedBox(),
-                        SizedBox(height: _step == _Level5Step.writeBa ? 30 : 0),
-                        // ── Image + suffix label (steps 2 & 3) ───────
+                            : const SizedBox(),
+                        SizedBox(
+                          height: _step == _Level5Step.writeBa ? 30 : 0,
+                        ),
                         if (_step != _Level5Step.writeBa) ...[
                           Image.asset(
                             _stepImagePath(),
@@ -364,8 +369,6 @@ class _Level5ScreenState extends State<Level5Screen> {
                           ),
                           const SizedBox(height: 20),
                         ],
-
-                        // ── Writing area row ──────────────────────────
                         SizedBox(
                           height: 110,
                           child: Row(
@@ -374,8 +377,7 @@ class _Level5ScreenState extends State<Level5Screen> {
                             children: [
                               Row(
                                 mainAxisSize: MainAxisSize.min,
-                                textDirection: TextDirection
-                                    .rtl, // لضمان وضع حرف الـ ب يمين الكلمة دائماً
+                                textDirection: TextDirection.rtl,
                                 crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
                                   _buildWritingArea(),
@@ -391,7 +393,6 @@ class _Level5ScreenState extends State<Level5Screen> {
                                 ],
                               ),
                               const SizedBox(width: 16),
-                              // Send / draw button
                               _isProcessing
                                   ? const SizedBox(
                                       width: 50,
@@ -417,8 +418,6 @@ class _Level5ScreenState extends State<Level5Screen> {
                       ],
                     ),
                   ),
-
-                  // ── Reset button (top left) ───────────────────────
                   if (_hasStrokes)
                     Positioned(
                       top: 20,
@@ -434,7 +433,6 @@ class _Level5ScreenState extends State<Level5Screen> {
     );
   }
 
-  /// ── Loading view while model is being prepared ─────────────────
   Widget _buildLoadingView() {
     return Center(
       child: Column(
@@ -444,7 +442,7 @@ class _Level5ScreenState extends State<Level5Screen> {
           const SizedBox(height: 20),
           Text(
             '...جاري التحضير',
-            style: TextStyle(
+            style: const TextStyle(
               fontFamily: 'Cairo-ExtraBold',
               fontSize: 16,
               color: AppColors.primary,
@@ -455,43 +453,38 @@ class _Level5ScreenState extends State<Level5Screen> {
     );
   }
 
-  // ── Header text per step ──────────────────────────────────
   String _headerText() {
     switch (_step) {
       case _Level5Step.writeBa:
         return 'اكتب حرف الباء';
       case _Level5Step.writeBaDuck:
-        return '';
       case _Level5Step.writeBrOrange:
         return '';
     }
   }
 
-  // ── Image path per step ───────────────────────────────────
   String _stepImagePath() {
     switch (_step) {
       case _Level5Step.writeBaDuck:
         return 'assets/images/level5/duck.png';
       case _Level5Step.writeBrOrange:
         return 'assets/images/level5/orange.png';
-      default:
+      case _Level5Step.writeBa:
         return '';
     }
   }
 
-  // ── Suffix text shown next to writing area ────────────────
   String _stepSuffix() {
     switch (_step) {
       case _Level5Step.writeBaDuck:
         return 'طه';
       case _Level5Step.writeBrOrange:
         return 'تقالة';
-      default:
+      case _Level5Step.writeBa:
         return '';
     }
   }
 
-  // ── Writing Area ──────────────────────────────────────────
   Widget _buildWritingArea() {
     return Builder(
       builder: (ctx) {
@@ -509,9 +502,7 @@ class _Level5ScreenState extends State<Level5Screen> {
             if (box != null) _onPointerUp(e, box);
           },
           child: Container(
-            width: _step == _Level5Step.writeBa
-                ? 280
-                : 130, // تصغير المربع في حال إكمال الكلمة
+            width: _step == _Level5Step.writeBa ? 280 : 130,
             height: 90,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.6),
@@ -541,9 +532,6 @@ class _Level5ScreenState extends State<Level5Screen> {
   }
 }
 
-// ============================================================
-//  Writing Painter
-// ============================================================
 class _WritingPainter extends CustomPainter {
   final List<List<Offset>> strokes;
   final List<Offset> currentStroke;
@@ -559,13 +547,11 @@ class _WritingPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // ── Dotted baseline ───────────────────────────────────
     if ((strokes.isEmpty && currentStroke.isEmpty) ||
         recognizedText.isNotEmpty) {
       _drawDottedLine(canvas, size);
     }
 
-    // ── Recognized text centered in area ─────────────────
     if (recognizedText.isNotEmpty) {
       Color textColor = AppColors.primary;
       if (isCorrectMatch == true) textColor = Colors.green;
@@ -589,7 +575,6 @@ class _WritingPainter extends CustomPainter {
         Offset((size.width - tp.width) / 2, (size.height - tp.height) / 2),
       );
     } else {
-      // ── Draw ink strokes ─────────────────────────────
       final strokePaint = Paint()
         ..color = AppColors.primary.withOpacity(0.85)
         ..strokeWidth = 4

@@ -4,10 +4,11 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
-import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 
 // ============================================================
-//  LetterPixelMap  —  Letter pixel map in memory
+//  LetterPixelMap
 // ============================================================
 class LetterPixelMap {
   final Uint8List _alpha;
@@ -30,9 +31,7 @@ class LetterPixelMap {
       Rect.fromLTWH(0, 0, canvasWidth, canvasHeight),
     );
 
-    // Same fontSize used in painter
     final fontSize = canvasWidth * 0.65;
-
     final tp = TextPainter(
       text: TextSpan(
         text: letter,
@@ -40,14 +39,12 @@ class LetterPixelMap {
           fontSize: fontSize,
           color: Colors.black,
           fontWeight: FontWeight.bold,
-          height: 1.4, // Same height used in painter
+          height: 1.4,
         ),
       ),
       textDirection: TextDirection.rtl,
     );
     tp.layout(maxWidth: canvasWidth);
-
-    // Same offset calculation used in painter
     final offsetX = (canvasWidth - tp.width) / 2;
     final offsetY = (canvasHeight - tp.height) / 2;
     tp.paint(canvas, Offset(offsetX, offsetY));
@@ -64,7 +61,6 @@ class LetterPixelMap {
     for (int i = 0; i < w * h; i++) {
       alpha[i] = rgba[i * 4 + 3];
     }
-
     return LetterPixelMap._(alpha, w, h);
   }
 
@@ -83,9 +79,7 @@ class LetterPixelMap {
     return set;
   }
 
-  int toIndex(Offset point) {
-    return point.dy.round() * width + point.dx.round();
-  }
+  int toIndex(Offset point) => point.dy.round() * width + point.dx.round();
 }
 
 // ============================================================
@@ -125,9 +119,9 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   final Set<int> _coveredPixels = {};
   String _cachedLetter = '';
 
-  // Separate width and height for canvas for letters extending up/down
   double _canvasWidth = 0;
   double _canvasHeight = 0;
+  DateTime _exerciseStartedAt = DateTime.now();
 
   @override
   void initState() {
@@ -149,14 +143,10 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
     final args = ModalRoute.of(context)?.settings.arguments as Map?;
     final letter = args?['letter'] as String? ?? '';
     if (letter.isNotEmpty && letter != _cachedLetter) {
-      _schedulePixelMapBuild(letter);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _buildPixelMap(letter);
+      });
     }
-  }
-
-  void _schedulePixelMapBuild(String letter) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) _buildPixelMap(letter);
-    });
   }
 
   Future<void> _buildPixelMap(String letter) async {
@@ -212,7 +202,6 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
     }
 
     setState(() => _touchPoints.add(localPos));
-
     if (addedNew) _checkCompletion();
   }
 
@@ -225,14 +214,26 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   void _onCompleted() {
     if (_completed) return;
     setState(() => _completed = true);
+    final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
 
-    // Update progress
-    if (_childId != 0 && _letterId != 0) {
-      context.read<ProgressCubit>().markAsWritten(
-        _childId,
-        'level1',
-        _letterId,
+    // Submit writing result
+    if (_childId != 0) {
+      context.read<SubmissionCubit>().submit(
+        childId: _childId,
+        level: 'level1',
+        exerciseType: 'writing',
+        exerciseId: _letterId, // same as letter.id
+        status: 'pass',
+        attemptsCount: 0,
+        duration: duration,
+        totalItems: 1,
+        metadata: {'letter': _currentLetter},
       );
+    }
+
+    // Check if this was the last letter (letterId == 28 = ياء)
+    if (_letterId == 28 && _childId != 0) {
+      context.read<ChildCubit>().updateLevel(_childId, 'level2');
     }
 
     final rnd = Random();
@@ -263,6 +264,7 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
       _pixelMap = null;
       _totalLetterPixels = null;
       _cachedLetter = '';
+      _exerciseStartedAt = DateTime.now();
     });
     _buildPixelMap(_currentLetter);
   }
@@ -270,25 +272,17 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size;
-
-    // Set drawing box size based on shortest screen dimension to ensure full letter visibility
-    final double boxSize = (screenSize.shortestSide * 0.75).clamp(200.0, 350.0);
+    final double boxSize =
+        (screenSize.shortestSide * 0.75).clamp(200.0, 350.0);
     final canvasWidth = boxSize;
     final canvasHeight = boxSize;
 
-    // Rebuild if dimensions change
     if (canvasWidth != _canvasWidth || canvasHeight != _canvasHeight) {
       _canvasWidth = canvasWidth;
       _canvasHeight = canvasHeight;
-      if (_cachedLetter.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _buildPixelMap(_currentLetter);
-        });
-      } else if (_currentLetter.isNotEmpty) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          _buildPixelMap(_currentLetter);
-        });
-      }
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_currentLetter.isNotEmpty) _buildPixelMap(_currentLetter);
+      });
     }
 
     return Scaffold(
@@ -298,7 +292,6 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
           SafeArea(
             child: Column(
               children: [
-                // ── header ──────────────────────────────────────
                 Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8,
@@ -329,8 +322,6 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
                     ],
                   ),
                 ),
-
-                // ── Letter ───────────────────────────────────────
                 Expanded(
                   child: Align(
                     alignment: Alignment.bottomCenter,
@@ -358,13 +349,10 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
               ],
             ),
           ),
-
-          // ── Confetti ────────────────────────────────────────
           if (_completed)
             IgnorePointer(
               child: SizedBox(
@@ -380,7 +368,7 @@ class _Level1WriteScreenState extends State<Level1WriteScreen>
 }
 
 // ============================================================
-//  Confetti Particle
+//  Confetti
 // ============================================================
 class _ConfettiParticle {
   late double x, y, speedX, speedY, size, rotation, rotationSpeed;
@@ -418,9 +406,6 @@ class _ConfettiParticle {
   }
 }
 
-// ============================================================
-//  Confetti Painter
-// ============================================================
 class _ConfettiPainter extends CustomPainter {
   final List<_ConfettiParticle> particles;
   _ConfettiPainter(this.particles);
@@ -473,9 +458,7 @@ class LetterTracePainter extends CustomPainter {
 
   TextPainter _buildTextPainter(Size size, Color color) {
     final refWidth = canvasWidth ?? size.width;
-    // Same fontSize used in LetterPixelMap.build
     final fontSize = refWidth * 0.65;
-
     final tp = TextPainter(
       text: TextSpan(
         text: letter,
@@ -483,7 +466,7 @@ class LetterTracePainter extends CustomPainter {
           fontSize: fontSize,
           color: color,
           fontWeight: FontWeight.bold,
-          height: 1.4, // Increase line height for letters extending downwards like ج
+          height: 1.4,
         ),
       ),
       textDirection: TextDirection.rtl,
@@ -497,7 +480,6 @@ class LetterTracePainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Ghost letter (faded)
     final ghost = _buildTextPainter(size, traceColor.withOpacity(0.15));
     ghost.paint(canvas, _letterOffset(ghost, size));
 
@@ -515,7 +497,6 @@ class LetterTracePainter extends CustomPainter {
       canvas.drawCircle(point, brushRadius, tracePaint);
     }
 
-    // Mask in the shape of the letter — color appears only inside the letter
     final mask = _buildTextPainter(size, Colors.black);
     canvas.saveLayer(rect, Paint()..blendMode = BlendMode.dstIn);
     mask.paint(canvas, _letterOffset(mask, size));

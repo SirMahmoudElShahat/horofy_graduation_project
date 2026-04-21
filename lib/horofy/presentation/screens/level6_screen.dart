@@ -4,17 +4,11 @@ import 'package:get/get.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-// ══════════════════════════════════════════════════════════
-//  Steps:
-//  _confirmedCount = 0 → shows "أنا"             → records "أنا"
-//  _confirmedCount = 1 → shows "أنا / أحب"       → records "أنا أحب"
-//  _confirmedCount = 2 → shows "أنا / أحب / البطيخ" → records "أنا أحب البطيخ"
-//  _confirmedCount = 3 → everything done → watermelon image + Next
-// ══════════════════════════════════════════════════════════
 const _words = ['أنا', 'أحب', 'البطيخ'];
 
 class Level6Screen extends StatefulWidget {
@@ -30,16 +24,16 @@ class _Level6ScreenState extends State<Level6Screen> {
   bool _speechEnabled = false;
   bool _isListening = false;
   int _confirmedCount = 0;
+  int _childId = 0;
+  int _attemptsCount = 0;
+  final List<String> _mistakes = [];
+  DateTime _exerciseStartedAt = DateTime.now();
 
   bool get _allDone => _confirmedCount >= _words.length;
 
-  // The sentence to be recorded in the current stage
   String get _targetSentence =>
       _words.sublist(0, _confirmedCount + 1).join(' ');
 
-  int _childId = 0;
-
-  // ── normalize ────────────────────────────────────────────
   String _normalize(String text) {
     return text
         .replaceAll('أ', 'ا')
@@ -85,7 +79,6 @@ class _Level6ScreenState extends State<Level6Screen> {
     super.dispose();
   }
 
-  // ── speech ───────────────────────────────────────────────
   Future<void> _startListening() async {
     if (_isListening || !_speechEnabled || _allDone) return;
     setState(() => _isListening = true);
@@ -109,7 +102,6 @@ class _Level6ScreenState extends State<Level6Screen> {
     final spoken = _normalize(result.recognizedWords).trim();
     if (spoken.isEmpty) return;
 
-    // Verify that all words of the target sentence are present in the spoken text
     final targetWords = _normalize(_targetSentence).split(' ');
     final isCorrect = targetWords.every((w) => spoken.contains(w));
 
@@ -119,7 +111,6 @@ class _Level6ScreenState extends State<Level6Screen> {
         _isListening = false;
         _confirmedCount++;
       });
-      // مسح أي سناك بار قديم لتجنب ظهور رسائل متراكمة
       Get.closeAllSnackbars();
       _showSnackBar(
         'أحسنت 🎉',
@@ -127,18 +118,29 @@ class _Level6ScreenState extends State<Level6Screen> {
         isError: false,
         position: _allDone ? SnackPosition.BOTTOM : SnackPosition.TOP,
       );
-    } else {
-      // لا نظهر الخطأ ولا نوقف حالة الاستماع إلا عندما ينتهي المستخدم من التحدث تماماً
-      if (result.finalResult) {
-        setState(() => _isListening = false);
-        _showSnackBar('حاول تاني 🔄', 'سمعت: $spoken');
-      }
+    } else if (result.finalResult) {
+      setState(() => _isListening = false);
+      _attemptsCount++;
+      _mistakes.add(_targetSentence);
+      _showSnackBar('حاول تاني 🔄', 'سمعت: $spoken');
     }
   }
 
-  // ── navigate to result ───────────────────────────────────
   Future<void> _onNext() async {
     if (_childId != 0) {
+      final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+      context.read<SubmissionCubit>().submit(
+        childId: _childId,
+        level: 'level6',
+        exerciseType: 'listening',
+        exerciseId: 1,
+        status: 'pass',
+        attemptsCount: _attemptsCount,
+        duration: duration,
+        totalItems: _words.length,
+        mistakes: List.from(_mistakes),
+        metadata: {'sentence': _words.join(' ')},
+      );
       await context.read<ChildCubit>().updateLevel(_childId, 'level7');
     }
     if (!mounted) return;
@@ -174,9 +176,6 @@ class _Level6ScreenState extends State<Level6Screen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  BUILD
-  // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -184,10 +183,7 @@ class _Level6ScreenState extends State<Level6Screen> {
       body: SafeArea(
         child: Stack(
           children: [
-            // ── Content ─────────────────────────────────────
             _allDone ? _buildSuccessView() : _buildSentenceView(),
-
-            // ── Next button (only when everything is done) ──────────────
             if (_allDone)
               Positioned(
                 top: 20,
@@ -197,8 +193,6 @@ class _Level6ScreenState extends State<Level6Screen> {
                   onPressed: _onNext,
                 ),
               ),
-
-            // ── Mic button ──────────────────────────────────
             if (!_allDone)
               Positioned(
                 bottom: 30,
@@ -217,9 +211,7 @@ class _Level6ScreenState extends State<Level6Screen> {
                       ),
                     ExercisesButton(
                       buttonIcon: _isListening ? Icons.stop_rounded : Icons.mic,
-                      onPressed: _isListening
-                          ? _stopListening
-                          : _startListening,
+                      onPressed: _isListening ? _stopListening : _startListening,
                     ),
                   ],
                 ),
@@ -230,9 +222,7 @@ class _Level6ScreenState extends State<Level6Screen> {
     );
   }
 
-  // ── The sentence is built word by word ──────────────────────────────
   Widget _buildSentenceView() {
-    // Show confirmed words + current word only
     final visibleCount = _confirmedCount + 1;
 
     return Center(
@@ -274,7 +264,6 @@ class _Level6ScreenState extends State<Level6Screen> {
     );
   }
 
-  // ── Watermelon image after all three are successful ────────────────────────
   Widget _buildSuccessView() {
     return Center(
       child: Column(

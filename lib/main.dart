@@ -12,26 +12,26 @@ import 'package:horofy/horofy/data/datasources/chat_remote_datasource.dart';
 import 'package:horofy/horofy/data/datasources/child_remote_datasource.dart';
 import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/datasources/local_data_source.dart';
-import 'package:horofy/horofy/data/datasources/progress_local_datasource.dart';
+import 'package:horofy/horofy/data/datasources/submission_remote_datasource.dart';
 import 'package:horofy/horofy/data/repositories/auth_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/child_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/letters_repository_impl.dart';
 import 'package:horofy/horofy/data/repositories/onboarding_repository_impl.dart';
-import 'package:horofy/horofy/data/repositories/progress_repository_impl.dart';
+import 'package:horofy/horofy/data/repositories/submission_repository_impl.dart';
 import 'package:horofy/horofy/domain/usecases/add_child_usecase.dart';
 import 'package:horofy/horofy/domain/usecases/auth_usecases.dart';
 import 'package:horofy/horofy/domain/usecases/letters_usecase.dart';
-import 'package:horofy/horofy/domain/usecases/progress_usecases.dart';
+import 'package:horofy/horofy/domain/usecases/submission_usecases.dart';
 import 'package:horofy/horofy/presentation/cubit/auth_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/chat_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/letters_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
-import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
 import 'package:horofy/horofy/data/datasources/mad_letters_datasource.dart';
 import 'package:horofy/horofy/data/repositories/mad_letters_repository_impl.dart';
 import 'package:horofy/horofy/domain/usecases/mad_letters_usecase.dart';
 import 'package:horofy/horofy/presentation/cubit/level2_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,6 +45,7 @@ void main() async {
               OnboardingCubit(OnboardingRepositoryImpl(LocalDataSourceImpl())),
         ),
 
+        /// Auth
         BlocProvider(
           create: (context) {
             final dataSource = AuthRemoteDataSourceImpl(dio: Dio());
@@ -83,24 +84,18 @@ void main() async {
           },
         ),
 
-        /// Progress Feature
+        /// Submissions — replaces ProgressCubit
         BlocProvider(
           create: (context) {
-            final dataSource = ProgressLocalDataSourceImpl();
-            final repository = ProgressRepositoryImpl(dataSource);
-            return ProgressCubit(
-              saveProgressUseCase: SaveProgressUseCase(repository),
-              getProgressForChildUseCase: GetProgressForChildUseCase(
-                repository,
-              ),
-              getProgressForLetterUseCase: GetProgressForLetterUseCase(
-                repository,
-              ),
-              updateProgressUseCase: UpdateProgressUseCase(repository),
+            final dataSource = SubmissionRemoteDataSourceImpl(dio: Dio());
+            final repository = SubmissionRepositoryImpl(dataSource);
+            return SubmissionCubit(
+              submitExerciseUseCase: SubmitExerciseUseCase(repository),
+              getChildSubmissionsUseCase: GetChildSubmissionsUseCase(repository),
             );
           },
         ),
-
+        
         /// Letters Feature
         BlocProvider(
           create: (context) {
@@ -114,25 +109,13 @@ void main() async {
           },
         ),
 
-        /// Mad Letters Feature
+       /// Level 2 — Mad Letters
         BlocProvider(
           create: (context) {
             final dataSource = MadLettersDataSourceImpl();
             final repository = MadLettersRepositoryImpl(dataSource);
-            final progressRepo = ProgressRepositoryImpl(
-              ProgressLocalDataSourceImpl(),
-            );
-
             return Level2Cubit(
               getMadLettersUseCase: GetMadLettersUseCase(repository),
-              saveProgressUseCase: SaveProgressUseCase(progressRepo),
-              getProgressForChildUseCase: GetProgressForChildUseCase(
-                progressRepo,
-              ),
-              getProgressForLetterUseCase: GetProgressForLetterUseCase(
-                progressRepo,
-              ),
-              updateProgressUseCase: UpdateProgressUseCase(progressRepo),
             )..loadMadLetters();
           },
         ),

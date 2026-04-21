@@ -6,13 +6,11 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-// ══════════════════════════════════════════════════════════
-//  Word Data Model
-// ══════════════════════════════════════════════════════════
 class _WordData {
   final String word;
   final String imagePath;
@@ -25,7 +23,6 @@ class _WordData {
   });
 }
 
-// Words used in level 4
 const _words = [
   _WordData(
     word: 'بَيْت',
@@ -39,20 +36,11 @@ const _words = [
   ),
 ];
 
-// The correct letter the child must select
 const _correctChoice = 'ب';
-
-// Sound asset for the target letter (Ba)
 const _baSound = 'sounds/letter_name/ba.mp3';
 
-// ══════════════════════════════════════════════════════════
-//  Level 4 Steps
-// ══════════════════════════════════════════════════════════
 enum _Level4Step { choose, record }
 
-// ══════════════════════════════════════════════════════════
-//  Level4Screen
-// ══════════════════════════════════════════════════════════
 class Level4Screen extends StatefulWidget {
   const Level4Screen({super.key});
 
@@ -76,7 +64,10 @@ class _Level4ScreenState extends State<Level4Screen>
   _Level4Step _step = _Level4Step.choose;
   int _childId = 0;
 
-  // ── Lifecycle ────────────────────────────────────────────
+  int _attemptsCount = 0;
+  final List<String> _mistakes = [];
+  DateTime _exerciseStartedAt = DateTime.now();
+
   @override
   void initState() {
     super.initState();
@@ -97,8 +88,9 @@ class _Level4ScreenState extends State<Level4Screen>
         if (mounted) setState(() => _isListening = false);
       },
       onStatus: (s) {
-        if (s == 'notListening' && mounted)
+        if (s == 'notListening' && mounted) {
           setState(() => _isListening = false);
+        }
       },
     );
     if (mounted) setState(() {});
@@ -112,13 +104,11 @@ class _Level4ScreenState extends State<Level4Screen>
     super.dispose();
   }
 
-  // ── Play sound asset ─────────────────────────────────────
   Future<void> _playSound(String assetPath) async {
     await _player.stop();
     await _player.play(AssetSource(assetPath));
   }
 
-  // ── Helpers ──────────────────────────────────────────────
   String _normalize(String text) {
     return text
         .replaceAll('أ', 'ا')
@@ -148,10 +138,8 @@ class _Level4ScreenState extends State<Level4Screen>
     );
   }
 
-  // ── Letter Selection ─────────────────────────────────────
   void _onLetterTap(String letter) {
     if (letter == _correctChoice) {
-      // Capture NavigatorState before push to avoid stale context
       final navigator = Navigator.of(context);
       Navigator.pushNamed(
         context,
@@ -168,12 +156,12 @@ class _Level4ScreenState extends State<Level4Screen>
         },
       );
     } else {
-      // Wrong — show red snackbar
+      _attemptsCount++;
+      _mistakes.add(letter);
       _showSnackBar('خطأ', 'حاول تاني! الإجابة الصحيحة هي حرف الباء ب');
     }
   }
 
-  // ── Speech Recording ─────────────────────────────────────
   Future<void> _startListening() async {
     if (_isListening || !_speechEnabled) return;
     setState(() {
@@ -192,56 +180,53 @@ class _Level4ScreenState extends State<Level4Screen>
 
   Future<void> _stopListening() async {
     await _stt.stop();
-    if (mounted) {
-      setState(() => _isListening = false);
-    }
+    if (mounted) setState(() => _isListening = false);
   }
 
-  // Same pattern as Level1ListenScreen._onSpeechResult — no Future.delayed,
-  // navigate immediately when correct so there is no async gap
   void _onSpeechResult(SpeechRecognitionResult result) {
-    // Avoid execution if the widget is destroyed or if the answer is already correct to prevent duplicates
     if (!mounted || _isCorrect) return;
 
-    String spoken = _normalize(
-      result.recognizedWords,
-    ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
-
+    String spoken = _normalize(result.recognizedWords)
+        .replaceAll('حرف', '')
+        .replaceAll('الحرف', '')
+        .trim();
     if (spoken.isEmpty) return;
 
-    // Check if the spoken word matches the current word
     bool isCorrect = false;
     if (_wordIndex == 0) {
       isCorrect = spoken.contains('بيت') || spoken.contains('بيتا');
     } else {
-      isCorrect =
-          spoken.contains('بقره') ||
+      isCorrect = spoken.contains('بقره') ||
           spoken.contains('بقرة') ||
           spoken.contains('بقر');
     }
 
+    if (!isCorrect && result.finalResult) {
+      _attemptsCount++;
+      _mistakes.add(spoken);
+    }
+
     setState(() {
       _isCorrect = isCorrect;
-      _statusMessage = isCorrect ? 'ممتاز! ✅' : 'حاول تاني 🔄  سمعت: $spoken';
+      _statusMessage =
+          isCorrect ? 'ممتاز! ✅' : 'حاول تاني 🔄  سمعت: $spoken';
     });
 
     if (isCorrect) {
-      _stt.stop(); // Stop listening immediately to prevent any late results
+      _stt.stop();
       setState(() => _isListening = false);
-      // Navigate immediately — no Future.delayed — same as Level1
       _showSnackBar('أحسنت', 'إجابة صحيحة!', isError: false);
       _navigateOnCorrect();
     }
   }
 
-  // ── Navigate after correct answer ────────────────────────
   void _navigateOnCorrect() {
     final isLastWord = _wordIndex == _words.length - 1;
     final navigator = Navigator.of(context);
-    final cubit = context.read<ChildCubit>();
+    final childCubit = context.read<ChildCubit>();
+    final submissionCubit = context.read<SubmissionCubit>();
 
     if (!isLastWord) {
-      // First word done — go to result screen, then directly to record step for word 2
       Navigator.pushNamed(
         context,
         exercisesResultScreen,
@@ -257,24 +242,37 @@ class _Level4ScreenState extends State<Level4Screen>
           }
         },
       );
-    } else {
-      // Last word done — go to result screen, then upgrade level and pop to levels
-      Navigator.pushNamed(
-        context,
-        exercisesResultScreen,
-        arguments: () async {
-          if (_childId != 0) {
-            await cubit.updateLevel(_childId, 'level5');
-          }
-          navigator.popUntil(ModalRoute.withName(childLevelsScreen));
-        },
-      );
+      return;
     }
+
+    Navigator.pushNamed(
+      context,
+      exercisesResultScreen,
+      arguments: () async {
+        if (_childId != 0) {
+          final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+          submissionCubit.submit(
+            childId: _childId,
+            level: 'level4',
+            exerciseType: 'listening',
+            exerciseId: 1,
+            status: 'pass',
+            attemptsCount: _attemptsCount,
+            duration: duration,
+            totalItems: _words.length,
+            mistakes: List.from(_mistakes),
+            metadata: {
+              'targetLetter': _correctChoice,
+              'words': _words.map((word) => word.word).toList(),
+            },
+          );
+          await childCubit.updateLevel(_childId, 'level5');
+        }
+        navigator.popUntil(ModalRoute.withName(childLevelsScreen));
+      },
+    );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  Build
-  // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -285,9 +283,6 @@ class _Level4ScreenState extends State<Level4Screen>
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  Step 1 — Letter Selection
-  // ══════════════════════════════════════════════════════════
   Widget _buildChooseStep() {
     return Stack(
       children: [
@@ -309,7 +304,6 @@ class _Level4ScreenState extends State<Level4Screen>
                     ),
                   ),
                   const SizedBox(width: 10),
-                  // Headphone button — plays ba.mp3 asset
                   ExercisesButton(
                     onPressed: () => _playSound(_baSound),
                     buttonIcon: Icons.headphones,
@@ -367,41 +361,27 @@ class _Level4ScreenState extends State<Level4Screen>
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  Step 2 — Word Recording (landscape: image right, word left, mic bottom-left)
-  // ══════════════════════════════════════════════════════════
   Widget _buildRecordStep() {
     final word = _words[_wordIndex];
-
     return Stack(
       children: [
-        // Word image on the right, colored word on the left
         Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Left: full word with target letter highlighted
               _buildColoredWord(word),
-
               const SizedBox(width: 60),
-
-              // Right: word image
               Image.asset(
                 word.imagePath,
                 height: 220,
                 fit: BoxFit.contain,
-                errorBuilder: (_, __, ___) => const Icon(
-                  Icons.image_outlined,
-                  size: 100,
-                  color: Colors.grey,
-                ),
+                errorBuilder: (_, __, ___) =>
+                    const Icon(Icons.image_outlined, size: 100, color: Colors.grey),
               ),
             ],
           ),
         ),
-
-        // Result message at the bottom center
         if (_statusMessage.isNotEmpty)
           Positioned(
             bottom: 20,
@@ -409,7 +389,7 @@ class _Level4ScreenState extends State<Level4Screen>
             right: 0,
             child: Center(
               child: AnimatedOpacity(
-                opacity: _statusMessage.isNotEmpty ? 1 : 0,
+                opacity: 1,
                 duration: const Duration(milliseconds: 300),
                 child: Container(
                   padding: const EdgeInsets.symmetric(
@@ -439,8 +419,6 @@ class _Level4ScreenState extends State<Level4Screen>
               ),
             ),
           ),
-
-        // Mic button at bottom-left — same position as Level 1
         Positioned(
           bottom: 30,
           left: 25,
@@ -467,10 +445,8 @@ class _Level4ScreenState extends State<Level4Screen>
     );
   }
 
-  // ── Colored Word — target letter rendered in a different color ──
   Widget _buildColoredWord(_WordData word) {
     final chars = word.word.characters.toList();
-
     return Text.rich(
       TextSpan(
         children: chars.map((char) {
