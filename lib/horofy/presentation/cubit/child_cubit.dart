@@ -42,8 +42,15 @@ class ChildCubit extends Cubit<ChildState> {
 
   // ── DELETE ────────────────────────────────────────────────
   Future<void> deleteChild(int id) async {
-    await deleteChildUseCase(id);
-    await loadChildren();
+    try {
+      emit(ChildDeleteLoading());
+      await deleteChildUseCase(id);
+      emit(ChildDeleteSuccess());
+      await loadChildren();
+    } catch (e) {
+      emit(ChildDeleteError(e.toString()));
+      await loadChildren();
+    }
   }
 
   // ── UPDATE ────────────────────────────────────────────────
@@ -62,6 +69,7 @@ class ChildCubit extends Cubit<ChildState> {
   // Calls use case directly to avoid ChildUpdateLoading flickering the UI
   Future<void> updateLevel(int childId, String newLevel) async {
     try {
+      emit(ChildUpdateLoading());
       final children = await getChildrenUseCase();
       ChildEntity? found;
       for (final c in children) {

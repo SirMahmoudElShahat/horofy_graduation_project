@@ -4,19 +4,18 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
-// ══════════════════════════════════════════════════════════
-//  Letter data — word "لعب"
-// ══════════════════════════════════════════════════════════
 class _LetterData {
   final String letter;
   final String image;
   final String sound;
-
   const _LetterData({
     required this.letter,
     required this.image,
@@ -45,18 +44,11 @@ const _wordLetters = [
 const _wordText = 'لَعِب';
 const _wordImagePath = 'assets/images/level3/play.png';
 
-// ══════════════════════════════════════════════════════════
-//  Steps
-// ══════════════════════════════════════════════════════════
-enum _Level3Step {
-  letters, // step 1: letters one by one
-  record, // step 2: record word
-  wordImage, // step 3: word image
-}
+// exerciseId for level3 — single exercise
+const _exerciseId = 1;
 
-// ══════════════════════════════════════════════════════════
-//  Screen
-// ══════════════════════════════════════════════════════════
+enum _Level3Step { letters, record, wordImage }
+
 class Level3Screen extends StatefulWidget {
   const Level3Screen({super.key});
 
@@ -69,16 +61,16 @@ class _Level3ScreenState extends State<Level3Screen> {
   final SpeechToText _stt = SpeechToText();
 
   _Level3Step _step = _Level3Step.letters;
-
-  // Record step
   bool _speechEnabled = false;
   bool _isListening = false;
   bool _isCorrect = false;
   String _statusMessage = '';
-
   int _childId = 0;
 
-  // ── init ────────────────────────────────────────────────
+  int _attemptsCount = 0;
+  final List<String> _mistakes = [];
+  DateTime _exerciseStartedAt = DateTime.now();
+
   @override
   void initState() {
     super.initState();
@@ -110,7 +102,6 @@ class _Level3ScreenState extends State<Level3Screen> {
     super.dispose();
   }
 
-  // ── helpers ─────────────────────────────────────────────
   String _normalize(String text) {
     return text
         .replaceAll('أ', 'ا')
@@ -129,7 +120,6 @@ class _Level3ScreenState extends State<Level3Screen> {
     await _player.play(AssetSource(p));
   }
 
-  // ── navigation ───────────────────────────────────────────
   void _onNext() {
     switch (_step) {
       case _Level3Step.letters:
@@ -139,11 +129,9 @@ class _Level3ScreenState extends State<Level3Screen> {
           _isCorrect = false;
         });
         break;
-
       case _Level3Step.record:
         setState(() => _step = _Level3Step.wordImage);
         break;
-
       case _Level3Step.wordImage:
         _finishLevel();
         break;
@@ -151,25 +139,35 @@ class _Level3ScreenState extends State<Level3Screen> {
   }
 
   Future<void> _finishLevel() async {
-    // Upgrade to level4
+    final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
     if (_childId != 0) {
+      // Submit passing result
+      context.read<SubmissionCubit>().submit(
+        childId: _childId,
+        level: 'level3',
+        exerciseType: 'reading',
+        exerciseId: _exerciseId,
+        status: 'pass',
+        attemptsCount: _attemptsCount,
+        duration: duration,
+        totalItems: 1,
+        mistakes: List.from(_mistakes),
+        metadata: {'word': _wordText},
+      );
       await context.read<ChildCubit>().updateLevel(_childId, 'level4');
     }
 
     if (!mounted) return;
-
     final navigator = Navigator.of(context);
     Navigator.pushNamed(
       context,
       exercisesResultScreen,
       arguments: () {
-        // Return to childHomeScreen and clear stack
         navigator.popUntil(ModalRoute.withName(childLevelsScreen));
       },
     );
   }
 
-  // ── speech ───────────────────────────────────────────────
   Future<void> _startListening() async {
     if (_isListening || !_speechEnabled) return;
     setState(() {
@@ -195,15 +193,17 @@ class _Level3ScreenState extends State<Level3Screen> {
     String spoken = _normalize(
       result.recognizedWords,
     ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
-
     if (spoken.isEmpty) return;
 
-    // Compare with the word "لعب" after normalization
-    final correct = _normalize(_wordText); // لعب
     final isCorrect =
-        spoken.contains(correct) ||
+        spoken.contains(_normalize(_wordText)) ||
         spoken.contains('لعب') ||
         spoken.contains('لاعب');
+
+    if (!isCorrect && result.finalResult) {
+      _attemptsCount++;
+      _mistakes.add(spoken);
+    }
 
     setState(() {
       _isListening = false;
@@ -212,32 +212,25 @@ class _Level3ScreenState extends State<Level3Screen> {
     });
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  BUILD
-  // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // ── Content ──────────────────────────────────
-            _buildStepContent(),
-
-            // ── Next Button ─────────────────────────────────
-            _buildNextButton(),
-          ],
-        ),
-      ),
+    return BlocBuilder<ChildCubit, ChildState>(
+      builder: (context, childState) {
+        return LoadingOverlay(
+          isLoading: childState is ChildUpdateLoading,
+          child: Scaffold(
+            backgroundColor: AppColors.background,
+            body: SafeArea(
+              child: Stack(children: [_buildStepContent(), _buildNextButton()]),
+            ),
+          ),
+        );
+      },
     );
   }
 
-  // ── Next button ──────────────────────────────────────────
   Widget _buildNextButton() {
-    // Hide the button during record step if answer is wrong
     final hide = _step == _Level3Step.record && !_isCorrect;
-
     return Positioned(
       top: 20,
       right: 20,
@@ -255,7 +248,6 @@ class _Level3ScreenState extends State<Level3Screen> {
     );
   }
 
-  // ── Step router ──────────────────────────────────────────
   Widget _buildStepContent() {
     switch (_step) {
       case _Level3Step.letters:
@@ -267,9 +259,6 @@ class _Level3ScreenState extends State<Level3Screen> {
     }
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 1 — Letters one by one
-  // ══════════════════════════════════════════════════════════
   Widget _buildLettersStep() {
     return Center(
       child: Column(
@@ -283,8 +272,6 @@ class _Level3ScreenState extends State<Level3Screen> {
             ),
           ),
           const SizedBox(height: 28),
-
-          // Three letters side by side in RTL order
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: _wordLetters.reversed.map((wl) {
@@ -293,7 +280,6 @@ class _Level3ScreenState extends State<Level3Screen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Letter image
                     Container(
                       width: 90,
                       height: 90,
@@ -318,8 +304,6 @@ class _Level3ScreenState extends State<Level3Screen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-
-                    // Written letter
                     Text(
                       wl.letter,
                       style: AppTextStyles.blackFont.copyWith(
@@ -329,8 +313,6 @@ class _Level3ScreenState extends State<Level3Screen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-
-                    // Audio button
                     ExercisesButton(
                       buttonIcon: Icons.headphones_rounded,
                       onPressed: () => _playAsset(wl.sound),
@@ -345,9 +327,6 @@ class _Level3ScreenState extends State<Level3Screen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 2 — Record word
-  // ══════════════════════════════════════════════════════════
   Widget _buildRecordStep() {
     return Center(
       child: Column(
@@ -361,8 +340,6 @@ class _Level3ScreenState extends State<Level3Screen> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Large written word
           Text(
             _wordText,
             style: AppTextStyles.blackFont.copyWith(
@@ -372,8 +349,6 @@ class _Level3ScreenState extends State<Level3Screen> {
             ),
           ),
           const SizedBox(height: 32),
-
-          // Mic button
           Stack(
             alignment: Alignment.center,
             children: [
@@ -393,11 +368,9 @@ class _Level3ScreenState extends State<Level3Screen> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // Status message
           if (_statusMessage.isNotEmpty)
             AnimatedOpacity(
-              opacity: _statusMessage.isNotEmpty ? 1 : 0,
+              opacity: 1,
               duration: const Duration(milliseconds: 300),
               child: Container(
                 padding: const EdgeInsets.symmetric(
@@ -429,9 +402,6 @@ class _Level3ScreenState extends State<Level3Screen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 3 — Word Image
-  // ══════════════════════════════════════════════════════════
   Widget _buildWordImageStep() {
     return Center(
       child: Column(

@@ -48,6 +48,7 @@ dependencies:
   speech_to_text: ^7.3.0
   google_mlkit_digital_ink_recognition: ^0.14.2
   dio: ^5.9.2
+  url_launcher: ^6.3.2
   
 
 dev_dependencies:

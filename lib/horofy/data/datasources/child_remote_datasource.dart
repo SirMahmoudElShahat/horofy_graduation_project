@@ -165,16 +165,28 @@ class ChildRemoteDataSourceImpl implements ChildRemoteDataSource {
     final numericId = int.tryParse(remoteId);
     if (numericId == null) throw Exception('remoteId غير صالح: $remoteId');
 
-    final response = await dio.delete(
-      AppApis.deleteChild(numericId.toString()),
-      options: _authOptions,
-    );
+    try {
+      final response = await dio.delete(
+        AppApis.deleteChild(numericId.toString()),
+        options: _authOptions,
+      );
 
-    // Accept 200, 201, or 204 as success
-    if (response.statusCode != 200 &&
-        response.statusCode != 201 &&
-        response.statusCode != 204) {
-      throw Exception(response.data['message'] ?? 'فشل حذف الطفل');
+      // Accept 200, 201, or 204 as success
+      if (response.statusCode != 200 &&
+          response.statusCode != 201 &&
+          response.statusCode != 204) {
+        throw Exception(response.data['message'] ?? 'فشل حذف الطفل');
+      }
+    } on DioException catch (e) {
+      String errorMsg = 'فشل حذف الطفل';
+      if (e.response != null) {
+        errorMsg = e.response?.data['message'] ?? e.message ?? errorMsg;
+      } else {
+        errorMsg = e.message ?? errorMsg;
+      }
+      throw Exception(errorMsg);
+    } catch (e) {
+      throw Exception(e.toString());
     }
   }
 }

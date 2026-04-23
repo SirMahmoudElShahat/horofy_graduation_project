@@ -52,9 +52,16 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
         backgroundColor: Theme.of(context).primaryColor,
         child: const Icon(Icons.add, color: Colors.white),
       ),
-      body: BlocBuilder<ChildCubit, ChildState>(
+      body: BlocConsumer<ChildCubit, ChildState>(
+        listener: (context, state) {
+          if (state is ChildDeleteSuccess) {
+            _showSnackBar(context, 'تم', 'تم حذف الطفل بنجاح', isError: false);
+          } else if (state is ChildDeleteError) {
+            _showSnackBar(context, 'خطأ', state.message, isError: true);
+          }
+        },
         builder: (context, state) {
-          if (state is ChildLoading) {
+          if (state is ChildLoading || state is ChildDeleteLoading) {
             return const LoadingWidget(fullScreen: true);
           } else if (state is ChildLoaded) {
             if (state.children.isEmpty) {
@@ -245,7 +252,6 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
                     Navigator.of(context).pop();
                     if (child.id != null) {
                       context.read<ChildCubit>().deleteChild(child.id!);
-                      _showSnackBar(context, 'تم', 'تم حذف الطفل بنجاح', isError: false);
                     }
                   },
                   style: ElevatedButton.styleFrom(

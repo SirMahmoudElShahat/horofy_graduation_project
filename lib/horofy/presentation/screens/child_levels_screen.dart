@@ -21,16 +21,20 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
   ChildEntity? child;
   String currentLevelEn = 'level1';
   bool isSkipping = false;
+  bool _didInitFromArgs = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_didInitFromArgs) return;
+
     final arg = ModalRoute.of(context)?.settings.arguments;
     final c = arg is ChildEntity ? arg : null;
     if (c != null) {
       child = c;
       currentLevelEn = c.level;
     }
+    _didInitFromArgs = true;
   }
 
   Future<void> _skipLevel() async {
@@ -98,6 +102,7 @@ class _ChildLevelsScreenState extends State<ChildLevelsScreen> {
             final updatedChild = state.children.firstWhere(
               (c) => c.id == child!.id,
             );
+            child = updatedChild;
             currentLevelEn = updatedChild.level;
           } catch (_) {}
         }

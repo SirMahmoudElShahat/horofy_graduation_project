@@ -5,10 +5,14 @@ import 'package:flutter_tts/flutter_tts.dart';
 import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/horofy/domain/entities/mad_letter.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/level2_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/level2_state.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_state.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
@@ -27,10 +31,19 @@ class _Level2ScreenState extends State<Level2Screen> {
 
   bool _speechEnabled = false;
   int _childId = 0;
-  bool _progressLoaded = false;
 
-  // ── helpers ──────────────────────────────────────────────
-  String normalizeArabic(String text) {
+  // Per-exercise attempt tracking
+  int _attemptsCount = 0;
+  final List<String> _currentMistakes = [];
+  DateTime _exerciseStartedAt = DateTime.now();
+
+  // Ensure resume runs once
+  bool _resumeApplied = false;
+
+  // Cache submissions until Level2Cubit is also ready (race condition fix)
+  SubmissionsLoaded? _pendingResume;
+
+  String _normalizeArabic(String text) {
     return text
         .replaceAll('أ', 'ا')
         .replaceAll('إ', 'ا')
@@ -43,7 +56,6 @@ class _Level2ScreenState extends State<Level2Screen> {
         .toLowerCase();
   }
 
-  // ── init ─────────────────────────────────────────────────
   @override
   void initState() {
     super.initState();
@@ -56,17 +68,44 @@ class _Level2ScreenState extends State<Level2Screen> {
     super.didChangeDependencies();
     _childId =
         (ModalRoute.of(context)?.settings.arguments as Map?)?['childId'] ?? 0;
-    _tryLoadProgress();
+
+    if (_childId != 0 && !_resumeApplied) {
+      context.read<SubmissionCubit>().loadChildSubmissions(_childId);
+    }
   }
 
-  void _tryLoadProgress() {
-    if (_progressLoaded || _childId == 0) return;
+  // ── Resume: jump to first mad letter not yet passed ───────────────────────
+  // exerciseId for level2: 1=ألف, 2=واو, 3=ياء (matches MadLetter.id)
+  //
+  // Called from TWO listeners to handle the race between SubmissionCubit
+  // and Level2Cubit — whichever arrives last will trigger the actual jump.
+  void _applyResume({SubmissionsLoaded? submissionsState}) {
+    if (_resumeApplied) return;
 
-    final state = context.read<Level2Cubit>().state;
-    if (state is! Level2Loaded) return;
+    // Cache if new submissions arrived
+    if (submissionsState != null) _pendingResume = submissionsState;
 
-    _progressLoaded = true;
-    context.read<Level2Cubit>().loadProgress(_childId);
+    // Need both cubits ready
+    final pending = _pendingResume;
+    if (pending == null) return;
+
+    final level2State = context.read<Level2Cubit>().state;
+    if (level2State is! Level2Loaded) return;
+
+    // Both ready — mark done and apply
+    _resumeApplied = true;
+
+    final completed = pending.completedExerciseIds('level2');
+    if (completed.isEmpty) return;
+
+    final nextIndex = level2State.madLetters.indexWhere(
+      (l) => !completed.contains(l.id),
+    );
+
+    // nextIndex == -1 means all letters done — stay on last
+    if (nextIndex != -1 && nextIndex != level2State.currentIndex) {
+      context.read<Level2Cubit>().jumpToIndex(nextIndex);
+    }
   }
 
   Future<void> _initTts() async {
@@ -93,9 +132,8 @@ class _Level2ScreenState extends State<Level2Screen> {
     super.dispose();
   }
 
-  // ── audio helpers ─────────────────────────────────────────
   Future<void> _playAsset(String path) async {
-    String p = path.startsWith('assets/') ? path.substring(7) : path;
+    final p = path.startsWith('assets/') ? path.substring(7) : path;
     await _player.stop();
     await _player.play(AssetSource(p));
   }
@@ -105,16 +143,13 @@ class _Level2ScreenState extends State<Level2Screen> {
     await _tts.speak(word);
   }
 
-  // ── speech ────────────────────────────────────────────────
   Future<void> _startListening(MadLetter letter) async {
     if (_stt.isListening) return;
 
-    // Clear the old result so the child can try again without confusion
     context.read<Level2Cubit>().onSpeechResult(
       isCorrect: false,
       spokenText: '',
     );
-
     context.read<Level2Cubit>().setListening(true);
 
     await _stt.listen(
@@ -132,29 +167,29 @@ class _Level2ScreenState extends State<Level2Screen> {
   }
 
   void _onResult(SpeechRecognitionResult result, MadLetter letter) {
-    String spoken = normalizeArabic(
+    String spoken = _normalizeArabic(
       result.recognizedWords,
     ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
-
     if (spoken.isEmpty) return;
 
     final currentStep =
         (context.read<Level2Cubit>().state as Level2Loaded).step;
 
     bool isCorrect;
-
     if (currentStep == Level2Step.practiceSpelling) {
-      // Verifies only the mad letter
       final madWordLetter = letter.wordLetters.firstWhere(
         (wl) => wl.isMadLetter,
       );
-      final correct = normalizeArabic(madWordLetter.letter);
-      final letterAr = normalizeArabic(letter.letterAr);
+      final correct = _normalizeArabic(madWordLetter.letter);
+      final letterAr = _normalizeArabic(letter.letterAr);
       isCorrect = spoken.contains(correct) || spoken.contains(letterAr);
     } else {
-      // practiceWord — verifies the full word
-      final correctWord = normalizeArabic(letter.wordText);
-      isCorrect = spoken.contains(correctWord);
+      isCorrect = spoken.contains(_normalizeArabic(letter.wordText));
+    }
+
+    if (!isCorrect && result.finalResult) {
+      _attemptsCount++;
+      _currentMistakes.add(spoken);
     }
 
     context.read<Level2Cubit>().onSpeechResult(
@@ -169,16 +204,32 @@ class _Level2ScreenState extends State<Level2Screen> {
     }
   }
 
-  // ── next handler ──────────────────────────────────────────
   Future<void> _onNext(Level2Loaded state) async {
     if (state.step == Level2Step.wordImage) {
-      await context.read<Level2Cubit>().saveProgressAndNext(childId: _childId);
-
-      if (!mounted) return;
-
       final isLast = state.isLastLetter;
+      final letter = state.currentMadLetter!;
+      final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
 
-      // If this is the last letter, update child level to level3
+      // Submit passing result with full data
+      if (_childId != 0) {
+        context.read<SubmissionCubit>().submit(
+          childId: _childId,
+          level: 'level2',
+          exerciseType: 'reading',
+          exerciseId: letter.id, // 1=ألف, 2=واو, 3=ياء
+          status: 'pass',
+          attemptsCount: _attemptsCount,
+          duration: duration,
+          totalItems: state.madLetters.length,
+          mistakes: List.from(_currentMistakes),
+          metadata: {'letterAr': letter.letterAr, 'word': letter.wordText},
+        );
+        _attemptsCount = 0;
+        _currentMistakes.clear();
+        _exerciseStartedAt = DateTime.now();
+      }
+
+      // Upgrade to level3 only after last mad letter
       if (isLast && _childId != 0) {
         await context.read<ChildCubit>().updateLevel(_childId, 'level3');
       }
@@ -190,8 +241,9 @@ class _Level2ScreenState extends State<Level2Screen> {
         exercisesResultScreen,
         arguments: () {
           if (isLast) {
-            Navigator.popUntil(context, ModalRoute.withName(childHomeScreen));
+            navigator.popUntil(ModalRoute.withName(childLevelsScreen));
           } else {
+            context.read<Level2Cubit>().moveToNextLetter();
             navigator.pop();
           }
         },
@@ -206,48 +258,69 @@ class _Level2ScreenState extends State<Level2Screen> {
     context.read<Level2Cubit>().nextStep();
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  BUILD
-  // ══════════════════════════════════════════════════════════
   @override
   Widget build(BuildContext context) {
-    return BlocListener<Level2Cubit, Level2State>(
-      listener: (_, state) {
-        if (state is Level2Loaded) {
-          _tryLoadProgress();
-        }
-      },
-      child: BlocBuilder<Level2Cubit, Level2State>(
-        builder: (context, state) {
-          if (state is! Level2Loaded || state.currentMadLetter == null) {
-            return const Scaffold(
-              backgroundColor: Color(0xFFFAEFE4),
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<SubmissionCubit, SubmissionState>(
+          listener: (context, state) {
+            if (state is SubmissionsLoaded) {
+              _applyResume(submissionsState: state);
+            }
+          },
+        ),
+        BlocListener<Level2Cubit, Level2State>(
+          listener: (context, state) {
+            if (state is Level2Loaded) {
+              _applyResume();
+            }
+          },
+        ),
+      ],
+      child: BlocBuilder<SubmissionCubit, SubmissionState>(
+        builder: (context, submissionState) {
+          return BlocBuilder<ChildCubit, ChildState>(
+            builder: (context, childState) {
+              final isLoading =
+                  submissionState is SubmissionLoading ||
+                  submissionState is SubmissionInitial ||
+                  childState is ChildUpdateLoading;
 
-          final letter = state.currentMadLetter!;
+              return BlocBuilder<Level2Cubit, Level2State>(
+                builder: (context, state) {
+                  if (state is! Level2Loaded ||
+                      state.currentMadLetter == null) {
+                    return const Scaffold(
+                      backgroundColor: Color(0xFFFAEFE4),
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
 
-          return Scaffold(
-            backgroundColor: const Color(0xFFFAEFE4),
-            body: SafeArea(
-              child: Stack(
-                children: [
-                  // ── Content ─────────────────────────────────
-                  _buildStepContent(state, letter),
+                  final letter = state.currentMadLetter!;
 
-                  // ── Next Button ─────────────────────────────────
-                  _buildNextButton(state, letter),
-                ],
-              ),
-            ),
+                  return LoadingOverlay(
+                    isLoading: isLoading,
+                    child: Scaffold(
+                      backgroundColor: const Color(0xFFFAEFE4),
+                      body: SafeArea(
+                        child: Stack(
+                          children: [
+                            _buildStepContent(state, letter),
+                            _buildNextButton(state, letter),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
           );
         },
       ),
     );
   }
 
-  // ── Next button ───────────────────────────────────────────
   Widget _buildNextButton(Level2Loaded state, MadLetter letter) {
     final hide =
         (state.step == Level2Step.practiceSpelling && !state.isCorrect) ||
@@ -270,7 +343,6 @@ class _Level2ScreenState extends State<Level2Screen> {
     );
   }
 
-  // ── Step Router ───────────────────────────────────────────
   Widget _buildStepContent(Level2Loaded state, MadLetter letter) {
     switch (state.step) {
       case Level2Step.letterImage:
@@ -288,15 +360,11 @@ class _Level2ScreenState extends State<Level2Screen> {
     }
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 1 — Mad Letter Image
-  // ══════════════════════════════════════════════════════════
   Widget _buildLetterImage(MadLetter letter) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          // Letter name
           Text(
             letter.letterAr,
             style: AppTextStyles.greyFont.copyWith(
@@ -305,16 +373,12 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 16),
-          // Letter image
           Image.asset(letter.image, height: 250, fit: BoxFit.contain),
         ],
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 2 — Spelled Word
-  // ══════════════════════════════════════════════════════════
   Widget _buildWordSpelled(MadLetter letter) {
     return Center(
       child: Column(
@@ -330,7 +394,6 @@ class _Level2ScreenState extends State<Level2Screen> {
           const SizedBox(height: 24),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            // RTL → reverse the order so Arabic starts from the right
             children: letter.wordLetters.reversed
                 .map((wl) => _buildSpelledLetterCard(wl))
                 .toList(),
@@ -346,7 +409,6 @@ class _Level2ScreenState extends State<Level2Screen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Letter image
           Container(
             width: 80,
             height: 80,
@@ -368,7 +430,6 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 6),
-          // Written letter
           Text(
             wl.letter,
             style: TextStyle(
@@ -379,7 +440,6 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 6),
-          // Sound button
           ExercisesButton(
             buttonIcon: Icons.headphones_rounded,
             onPressed: () => _playAsset(wl.sound),
@@ -389,11 +449,7 @@ class _Level2ScreenState extends State<Level2Screen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 3 — Full Word + TTS
-  // ══════════════════════════════════════════════════════════
   Widget _buildWordFull(Level2Loaded state, MadLetter letter) {
-    // normalize without diacritics for comparison only
     String stripDiacritics(String s) =>
         s.replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '');
 
@@ -421,8 +477,7 @@ class _Level2ScreenState extends State<Level2Screen> {
                     fontSize: 72,
                     fontWeight: FontWeight.bold,
                     color: isMadLetter
-                        ? Colors
-                              .orange // ← different color for the mad letter
+                        ? Colors.orange
                         : const Color(0xFF774019),
                   ),
                 );
@@ -439,9 +494,6 @@ class _Level2ScreenState extends State<Level2Screen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 4 — Practice Spelling (Mad Letter)
-  // ══════════════════════════════════════════════════════════
   Widget _buildPracticeSpelling(Level2Loaded state, MadLetter letter) {
     return Center(
       child: Column(
@@ -455,8 +507,6 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Letters with mic under the mad letter
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: letter.wordLetters.reversed.map((wl) {
@@ -465,7 +515,6 @@ class _Level2ScreenState extends State<Level2Screen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Image
                     Container(
                       width: 80,
                       height: 80,
@@ -487,7 +536,6 @@ class _Level2ScreenState extends State<Level2Screen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // Letter
                     Text(
                       wl.letter,
                       style: TextStyle(
@@ -500,7 +548,6 @@ class _Level2ScreenState extends State<Level2Screen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    // Mic under mad letter only
                     if (wl.isMadLetter)
                       _buildMicButton(state, letter)
                     else
@@ -510,28 +557,9 @@ class _Level2ScreenState extends State<Level2Screen> {
               );
             }).toList(),
           ),
-
           const SizedBox(height: 24),
-
-          // status message
           if (state.statusMessage.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: state.isCorrect
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                state.statusMessage,
-                style: TextStyle(
-                  fontFamily: 'Cairo-ExtraBold',
-                  fontSize: 16,
-                  color: state.isCorrect ? Colors.green : Colors.red,
-                ),
-              ),
-            ),
+            _buildStatusMessage(state.statusMessage, state.isCorrect),
         ],
       ),
     );
@@ -560,9 +588,6 @@ class _Level2ScreenState extends State<Level2Screen> {
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 5 — Practice Full Word
-  // ══════════════════════════════════════════════════════════
   Widget _buildPracticeWord(Level2Loaded state, MadLetter letter) {
     return Center(
       child: Column(
@@ -576,8 +601,6 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 24),
-
-          // Large written word
           Text(
             letter.wordText,
             style: const TextStyle(
@@ -588,38 +611,15 @@ class _Level2ScreenState extends State<Level2Screen> {
             ),
           ),
           const SizedBox(height: 32),
-
-          // Mic button
           _buildMicButton(state, letter),
           const SizedBox(height: 24),
-
-          // status message
           if (state.statusMessage.isNotEmpty)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-              decoration: BoxDecoration(
-                color: state.isCorrect
-                    ? Colors.green.withOpacity(0.1)
-                    : Colors.red.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Text(
-                state.statusMessage,
-                style: TextStyle(
-                  fontFamily: 'Cairo-ExtraBold',
-                  fontSize: 16,
-                  color: state.isCorrect ? Colors.green : Colors.red,
-                ),
-              ),
-            ),
+            _buildStatusMessage(state.statusMessage, state.isCorrect),
         ],
       ),
     );
   }
 
-  // ══════════════════════════════════════════════════════════
-  //  STEP 6 — Word Image
-  // ══════════════════════════════════════════════════════════
   Widget _buildWordImage(MadLetter letter) {
     return Center(
       child: Column(
@@ -639,7 +639,6 @@ class _Level2ScreenState extends State<Level2Screen> {
             letter.wordImage,
             height: 220,
             fit: BoxFit.contain,
-            // Fallback placeholder if image is missing
             errorBuilder: (_, __, ___) => Container(
               width: 220,
               height: 220,
@@ -653,8 +652,27 @@ class _Level2ScreenState extends State<Level2Screen> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
         ],
+      ),
+    );
+  }
+
+  Widget _buildStatusMessage(String message, bool isCorrect) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: isCorrect
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(
+          fontFamily: 'Cairo-ExtraBold',
+          fontSize: 16,
+          color: isCorrect ? Colors.green : Colors.red,
+        ),
       ),
     );
   }

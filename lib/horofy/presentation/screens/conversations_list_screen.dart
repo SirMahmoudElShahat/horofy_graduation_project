@@ -114,100 +114,102 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
         textDirection: TextDirection.rtl,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              /// عنوان النافذة
-              Text(
-                'اختر الطفل',
-                style: AppTextStyles.blackFont.copyWith(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                /// عنوان النافذة
+                Text(
+                  'اختر الطفل',
+                  style: AppTextStyles.blackFont.copyWith(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-                textAlign: TextAlign.center,
-              ),
-
-              const SizedBox(height: 20),
-
-              /// قائمة الأطفال
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: children.length,
-                itemBuilder: (_, i) {
-                  final child = children[i];
-
-                  return InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    onTap: () {
-                      Navigator.pop(context);
-                      _onNewConversation(child.id ?? 0);
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 14),
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(18),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.05),
-                            blurRadius: 10,
-                            offset: const Offset(0, 3),
-                          ),
-                        ],
-                      ),
-
-                      child: Row(
-                        children: [
-                          /// السهم (يسار)
-                          const Icon(
-                            Icons.arrow_back_ios_new,
-                            color: AppColors.primary,
-                            size: 20,
-                          ),
-
-                          const SizedBox(width: 14),
-
-                          /// النصوص
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  child.name,
-                                  textAlign: TextAlign.right,
-                                  style: AppTextStyles.blackFont.copyWith(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  levelEnToArabic(child.level),
-                                  textAlign: TextAlign.right,
-                                  style: AppTextStyles.greyFont.copyWith(
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
+            
+                const SizedBox(height: 20),
+            
+                /// قائمة الأطفال
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: children.length,
+                  itemBuilder: (_, i) {
+                    final child = children[i];
+            
+                    return InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      onTap: () {
+                        Navigator.pop(context);
+                        _onNewConversation(child.id ?? 0);
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 14),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 10,
+                              offset: const Offset(0, 3),
                             ),
-                          ),
-
-                          const SizedBox(width: 14),
-
-                          /// الصورة الشخصية (يمين)
-                          CircleAvatar(
-                            radius: 30,
-                            backgroundImage: AssetImage(child.avatar),
-                          ),
-                        ],
+                          ],
+                        ),
+            
+                        child: Row(
+                          children: [
+                            /// السهم (يسار)
+                            const Icon(
+                              Icons.arrow_back_ios_new,
+                              color: AppColors.primary,
+                              size: 20,
+                            ),
+            
+                            const SizedBox(width: 14),
+            
+                            /// النصوص
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  Text(
+                                    child.name,
+                                    textAlign: TextAlign.right,
+                                    style: AppTextStyles.blackFont.copyWith(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    levelEnToArabic(child.level),
+                                    textAlign: TextAlign.right,
+                                    style: AppTextStyles.greyFont.copyWith(
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+            
+                            const SizedBox(width: 14),
+            
+                            /// الصورة الشخصية (يمين)
+                            CircleAvatar(
+                              radius: 30,
+                              backgroundImage: AssetImage(child.avatar),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
-            ],
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
         ),
       ),

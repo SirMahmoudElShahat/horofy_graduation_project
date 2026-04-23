@@ -36,6 +36,19 @@ class ChildUpdateError extends ChildState {
   List<Object> get props => [message];
 }
 
+class ChildDeleteLoading extends ChildState {}
+
+class ChildDeleteSuccess extends ChildState {}
+
+class ChildDeleteError extends ChildState {
+  final String message;
+
+  const ChildDeleteError(this.message);
+
+  @override
+  List<Object> get props => [message];
+}
+
 class ChildLoading extends ChildState {}
 
 class ChildLoaded extends ChildState {

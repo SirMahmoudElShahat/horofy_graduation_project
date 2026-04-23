@@ -6,9 +6,10 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/data/models/letter_model.dart';
-import 'package:horofy/horofy/presentation/cubit/progress_cubit.dart';
-import 'package:horofy/horofy/presentation/cubit/progress_state.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_state.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:speech_to_text/speech_recognition_result.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 
@@ -20,23 +21,29 @@ class Level1ListenScreen extends StatefulWidget {
 }
 
 class _Level1ListenScreenState extends State<Level1ListenScreen> {
-  final AudioPlayer player = AudioPlayer();
+  final AudioPlayer _player = AudioPlayer();
   final SpeechToText _speechToText = SpeechToText();
+
   List<LetterModel> _letters = [];
   int _currentIndex = 0;
   bool _speechEnabled = false;
   bool _isPracticeMode = false;
-  String _statusMessage = '';
   int _childId = 0;
 
-  String normalizeArabic(String text) {
+  int _attemptsCount = 0;
+  final List<String> _currentMistakes = [];
+  DateTime _exerciseStartedAt = DateTime.now();
+
+  bool _resumeApplied = false;
+
+  String _normalizeArabic(String text) {
     return text
         .replaceAll('أ', 'ا')
         .replaceAll('إ', 'ا')
         .replaceAll('آ', 'ا')
         .replaceAll('ى', 'ي')
         .replaceAll('ة', 'ه')
-        .replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '')
+        .replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '')
         .trim()
         .toLowerCase();
   }
@@ -53,44 +60,52 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
     super.didChangeDependencies();
     _childId =
         (ModalRoute.of(context)?.settings.arguments as Map?)?['childId'] ?? 0;
-    if (_childId != 0) {
-      context.read<ProgressCubit>().loadProgress(_childId, 'level1');
+
+    if (_childId != 0 && !_resumeApplied) {
+      context.read<SubmissionCubit>().loadChildSubmissions(_childId);
     }
   }
 
-  void _initSpeech() async {
+  void _applyResume(SubmissionsLoaded state) {
+    if (_resumeApplied || _letters.isEmpty) return;
+    _resumeApplied = true;
+
+    final completed = state.completedExerciseIds(
+      'level1',
+      exerciseType: 'writing',
+    );
+    if (completed.isEmpty) return;
+
+    final nextIndex = _letters.indexWhere((l) => !completed.contains(l.id));
+    setState(() {
+      _currentIndex = nextIndex == -1 ? _letters.length - 1 : nextIndex;
+      _exerciseStartedAt = DateTime.now();
+    });
+  }
+
+  Future<void> _initSpeech() async {
     _speechEnabled = await _speechToText.initialize(
       debugLogging: true,
-      onStatus: (status) {
-        if (status == "notListening") {
-          setState(() {});
-        }
+      onStatus: (s) {
+        if (s == 'notListening' && mounted) setState(() {});
       },
-      onError: (error) {
-        setState(() {
-          _statusMessage = "حدث خطأ في التسجيل";
-        });
+      onError: (_) {
+        if (mounted) setState(() {});
       },
     );
-
-    _statusMessage = _speechEnabled ? 'جاهز للاستماع' : 'الميكروفون غير متاح';
-    setState(() {});
+    if (mounted) setState(() {});
   }
 
   @override
   void dispose() {
-    player.dispose();
+    _player.dispose();
     _speechToText.stop();
     super.dispose();
   }
 
   void _startListening() async {
     if (_speechToText.isListening) return;
-
-    setState(() {
-      _statusMessage = 'جاري الاستماع...';
-    });
-
+    setState(() {});
     await _speechToText.listen(
       onResult: _onSpeechResult,
       listenFor: const Duration(seconds: 20),
@@ -102,77 +117,73 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
 
   void _stopListening() async {
     await _speechToText.stop();
-    setState(() {
-      _statusMessage = 'تم الإيقاف';
-    });
+    setState(() {});
   }
 
   Future<void> _onSpeechResult(SpeechRecognitionResult result) async {
-    String spokenWords = normalizeArabic(result.recognizedWords);
+    String spoken = _normalizeArabic(result.recognizedWords);
+    if (spoken.isEmpty) return;
 
-    if (spokenWords.isEmpty) return;
+    spoken = spoken.replaceAll('حرف', '').replaceAll('الحرف', '').trim();
+    if (spoken.isEmpty) return;
 
-    spokenWords = spokenWords
-        .replaceAll("حرف", "")
-        .replaceAll("الحرف", "")
-        .trim();
+    final currentLetter = _letters[_currentIndex];
+    final correctLetter = _normalizeArabic(currentLetter.letterAr);
 
-    setState(() {
-      _statusMessage = spokenWords.isEmpty
-          ? 'لم يتم التقاط كلام'
-          : 'جاري المعالجة...';
-    });
-
-    if (spokenWords.isEmpty) return;
-
-    LetterModel currentLetter = _letters[_currentIndex];
-
-    String correctLetter = normalizeArabic(currentLetter.letterAr);
-
-    bool isCorrect =
-        spokenWords.contains(correctLetter) ||
-        spokenWords.contains(currentLetter.letterEn.toLowerCase());
+    final isCorrect =
+        spoken.contains(correctLetter) ||
+        spoken.contains(currentLetter.letterEn.toLowerCase());
 
     if (isCorrect) {
-      setState(() {
-        _statusMessage = 'إجابة صحيحة ✅';
-      });
-      if (_currentIndex < _letters.length - 1) {
-        _showSnackBar(context, "أحسنت", "إجابة صحيحة!", isError: false);
-        // Update progress for listened
-        context.read<ProgressCubit>().markAsListened(
-          _childId,
-          'level1',
-          currentLetter.id,
-        );
-        Navigator.pushNamed(
-          context,
-          exercisesResultScreen,
-          arguments: () {
-            Navigator.pushReplacementNamed(
-              context,
-              level1WriteScreen,
-              arguments: {
-                'letter': currentLetter.letter,
-                'childId': _childId,
-                'letterId': currentLetter.id,
-              },
-            );
+      final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+
+      if (_childId != 0) {
+        context.read<SubmissionCubit>().submit(
+          childId: _childId,
+          level: 'level1',
+          exerciseType: 'listening',
+          exerciseId: currentLetter.id,
+          status: 'pass',
+          attemptsCount: _attemptsCount,
+          duration: duration,
+          totalItems: _letters.length,
+          mistakes: List.from(_currentMistakes),
+          metadata: {
+            'letterAr': currentLetter.letterAr,
+            'letterEn': currentLetter.letterEn,
           },
         );
-        setState(() {
-          _currentIndex++;
-          _isPracticeMode = false;
-        });
-      } else {
-        //await context.read<ChildCubit>().updateLevel(child!.id!, 'level1');
-        _showSnackBar(context, "مبروك", "أنهيت جميع الحروف!", isError: false);
       }
-    } else {
+
+      _showSnackBar(context, 'أحسنت', 'إجابة صحيحة!', isError: false);
+
+      final navigator = Navigator.of(context);
+      Navigator.pushNamed(
+        context,
+        exercisesResultScreen,
+        arguments: () {
+          navigator.pushReplacementNamed(
+            level1WriteScreen,
+            arguments: {
+              'letter': currentLetter.letter,
+              'childId': _childId,
+              'letterId': currentLetter.id,
+            },
+          );
+        },
+      );
+
       setState(() {
-        _statusMessage = 'خطأ — سمعت: $spokenWords';
+        _currentIndex++;
+        _isPracticeMode = false;
+        _attemptsCount = 0;
+        _currentMistakes.clear();
+        _exerciseStartedAt = DateTime.now();
       });
-      _showSnackBar(context, "خطأ", "حاول مرة أخرى. سمعت: $spokenWords");
+    } else if (result.finalResult) {
+      _attemptsCount++;
+      _currentMistakes.add(spoken);
+      _showSnackBar(context, 'خطأ', 'حاول مرة أخرى. سمعت: $spoken');
     }
   }
 
@@ -200,95 +211,95 @@ class _Level1ListenScreenState extends State<Level1ListenScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_letters.isEmpty) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-    final currentLetter = _letters[_currentIndex];
-
-    return BlocListener<ProgressCubit, ProgressState>(
+    return BlocListener<SubmissionCubit, SubmissionState>(
       listener: (context, state) {
-        if (state is ProgressLoaded) {
-          // A letter is considered complete once it's written.
-          final writtenLetterIds = state.progress
-              .where((p) => p.written)
-              .map((p) => p.letterId)
-              .toSet();
+        if (state is SubmissionsLoaded) _applyResume(state);
+      },
+      child: BlocBuilder<SubmissionCubit, SubmissionState>(
+        builder: (context, state) {
+          final isLoading =
+              state is SubmissionLoading ||
+              state is SubmissionInitial ||
+              state is SubmissionSending;
 
-          // Find the index of the first letter that has not been written.
-          int nextIndex = _letters.indexWhere(
-            (letter) => !writtenLetterIds.contains(letter.id),
-          );
-
-          // If all letters are written, `indexWhere` returns -1.
-          // In that case, we can stay on the last letter.
-          if (nextIndex == -1 && _letters.isNotEmpty) {
-            nextIndex = _letters.length - 1;
-          } else if (nextIndex == -1) {
-            nextIndex = 0; // Handles case where _letters is empty
+          if (_letters.isEmpty && !isLoading) {
+            return const Scaffold(body: Center(child: Text('لا توجد بيانات')));
           }
 
-          setState(() {
-            _currentIndex = nextIndex;
-          });
-        }
-      },
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        body: Stack(
-          children: [
-            if (!_isPracticeMode)
-              Positioned(
-                top: 35,
-                right: 25,
-                child: ExercisesButton(
-                  onPressed: () {
-                    setState(() {
-                      _isPracticeMode = true;
-                    });
-                  },
-                  buttonIcon: Icons.arrow_forward_sharp,
-                ),
-              ),
-            Positioned(child: Center(child: Image.asset(currentLetter.image))),
-            Positioned(
-              bottom: 30,
-              left: 25,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_isPracticeMode && _speechToText.isListening)
-                    const SizedBox(
-                      width: 60,
-                      height: 60,
-                      child: CircularProgressIndicator(
-                        color: AppColors.primary,
-                        strokeWidth: 3,
-                      ),
+          final currentLetter = _letters.isNotEmpty
+              ? _letters[_currentIndex]
+              : null;
+
+          return LoadingOverlay(
+            isLoading: isLoading,
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              body: currentLetter == null
+                  ? const Center(child: CircularProgressIndicator())
+                  : Stack(
+                      children: [
+                        if (!_isPracticeMode)
+                          Positioned(
+                            top: 35,
+                            right: 25,
+                            child: ExercisesButton(
+                              onPressed: () =>
+                                  setState(() => _isPracticeMode = true),
+                              buttonIcon: Icons.arrow_forward_sharp,
+                            ),
+                          ),
+                        Positioned(
+                          child: Center(
+                            child: Image.asset(currentLetter.image),
+                          ),
+                        ),
+                        Positioned(
+                          bottom: 30,
+                          left: 25,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              if (_isPracticeMode && _speechToText.isListening)
+                                const SizedBox(
+                                  width: 60,
+                                  height: 60,
+                                  child: CircularProgressIndicator(
+                                    color: AppColors.primary,
+                                    strokeWidth: 3,
+                                  ),
+                                ),
+                              ExercisesButton(
+                                buttonIcon: _isPracticeMode
+                                    ? (_speechToText.isListening
+                                          ? Icons.stop_rounded
+                                          : Icons.mic)
+                                    : Icons.headphones_rounded,
+                                onPressed: _isPracticeMode
+                                    ? (_speechToText.isListening
+                                          ? _stopListening
+                                          : (_speechEnabled
+                                                ? _startListening
+                                                : () {}))
+                                    : () async {
+                                        String soundPath =
+                                            currentLetter.soundName;
+                                        if (soundPath.startsWith('assets/')) {
+                                          soundPath = soundPath.substring(7);
+                                        }
+                                        await _player.stop();
+                                        await _player.play(
+                                          AssetSource(soundPath),
+                                        );
+                                      },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                  ExercisesButton(
-                    buttonIcon: _isPracticeMode
-                        ? (_speechToText.isListening
-                              ? Icons.stop_rounded
-                              : Icons.mic)
-                        : Icons.headphones_rounded,
-                    onPressed: _isPracticeMode
-                        ? (_speechToText.isListening
-                              ? _stopListening
-                              : (_speechEnabled ? _startListening : () {}))
-                        : () async {
-                            String soundPath = currentLetter.soundName;
-                            if (soundPath.startsWith('assets/')) {
-                              soundPath = soundPath.substring(7);
-                            }
-                            await player.stop();
-                            await player.play(AssetSource(soundPath));
-                          },
-                  ),
-                ],
-              ),
             ),
-          ],
-        ),
+          );
+        },
       ),
     );
   }
