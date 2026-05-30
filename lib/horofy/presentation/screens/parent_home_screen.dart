@@ -111,18 +111,18 @@ class ParentHomeScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(18),
                       onTap: () async {
                         Navigator.pop(context);
-                
+
                         final token = CacheHelper.getString('accessToken');
                         final childId = child.id;
-                
+
                         if (token == null || token.isEmpty) {
                           print("No token found");
                           return;
                         }
-                
+
                         final url =
-                            'https://dyslexia-desgraphia.netlify.app/?childId=$childId&token=$token';
-                
+                            'https://dyslexia-dysgraphia.netlify.app/?childId=${childId}&token=${token}';
+
                         await openUrl(url);
                       },
                       child: Container(
