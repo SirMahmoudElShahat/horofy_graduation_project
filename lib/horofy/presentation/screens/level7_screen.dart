@@ -11,10 +11,24 @@ import 'package:horofy/core/constants/strings.dart';
 import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/core/widgets/loading_widget.dart';
+import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_state.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
+
+class _WordData {
+  final int letterIndex;
+  final String word;
+  final String imagePath;
+
+  const _WordData({
+    required this.letterIndex,
+    required this.word,
+    required this.imagePath,
+  });
+}
 
 class Level7Screen extends StatefulWidget {
   const Level7Screen({super.key});
@@ -24,6 +38,51 @@ class Level7Screen extends StatefulWidget {
 }
 
 class _Level7ScreenState extends State<Level7Screen> {
+  static const _wordTexts = [
+    'أرنب',   // ا
+    'برتقالة',  // ب
+    'تفاحة',  // ت
+    'ثلج',    // ث
+    'جزر',    // ج
+    'حذاء',   // ح
+    'خضار',   // خ
+    'دب',     // د
+    'ذرة',    // ذ
+    'رمان',   // ر
+    'زهرة',   // ز
+    'سمكة',   // س
+    'شمس',    // ش
+    'صندوق',  // ص
+    'ضرس',    // ض
+    'طماطم',  // ط
+    'ظرف',    // ظ
+    'عصفورة', // ع
+    'غيوم',   // غ
+    'فجل',    // ف
+    'قلم',    // ق
+    'كتاب',   // ك
+    'لمون',   // ل
+    'منطاد',  // م
+    'نحلة',   // ن
+    'هرة',    // ه
+    'ورق',    // و
+    'يد',     // ي
+  ];
+
+  static final List<_WordData> _words = _buildWords();
+
+  static List<_WordData> _buildWords() {
+    final letters = LettersLocalDataSourceImpl().getLetters();
+    return List.generate(
+      letters.length,
+      (i) => _WordData(
+        letterIndex: i,
+        word: _wordTexts[i],
+        imagePath: letters[i].image,
+      ),
+    );
+  }
+
   final DigitalInkRecognizer _recognizer = DigitalInkRecognizer(
     languageCode: 'ar',
   );
@@ -41,11 +100,15 @@ class _Level7ScreenState extends State<Level7Screen> {
   bool? _isCorrectMatch;
   int _childId = 0;
   bool _isModelReady = false;
+
+  int _wordIndex = 0;
   int _attemptsCount = 0;
   final List<String> _mistakes = [];
   DateTime _exerciseStartedAt = DateTime.now();
 
-  static const String _targetWord = 'بطريق';
+  bool _resumeApplied = false;
+
+  _WordData get _current => _words[_wordIndex];
 
   @override
   void initState() {
@@ -56,8 +119,40 @@ class _Level7ScreenState extends State<Level7Screen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _childId =
+    final newChildId =
         (ModalRoute.of(context)?.settings.arguments as Map?)?['childId'] ?? 0;
+    if (newChildId != _childId) _childId = newChildId;
+    if (_childId != 0 && !_resumeApplied) {
+      context.read<SubmissionCubit>().loadChildSubmissions(_childId);
+    }
+  }
+
+  void _applyResume(SubmissionsLoaded state) {
+    if (_resumeApplied) return;
+    _resumeApplied = true;
+
+    final completed = state.completedExerciseIds(
+      'level7',
+      exerciseType: 'writing',
+    );
+    if (completed.isEmpty) return;
+
+    // exerciseId = letterIndex + 1 — find first word not yet submitted
+    int firstIncomplete = -1;
+    for (int i = 0; i < _words.length; i++) {
+      if (!completed.contains(i + 1)) {
+        firstIncomplete = i;
+        break;
+      }
+    }
+    if (firstIncomplete > 0) {
+      setState(() {
+        _wordIndex = firstIncomplete;
+        _attemptsCount = 0;
+        _mistakes.clear();
+        _exerciseStartedAt = DateTime.now();
+      });
+    }
   }
 
   Future<void> _downloadModelIfNeeded() async {
@@ -153,22 +248,44 @@ class _Level7ScreenState extends State<Level7Screen> {
 
     try {
       final candidates = await _recognizer.recognize(_ink);
+
       if (candidates.isEmpty) {
         _attemptsCount++;
-        _mistakes.add(_targetWord);
+        _mistakes.add(_current.word);
         _showError('لم يتم التعرف على الكتابة، حاول تاني');
         setState(() => _isProcessing = false);
         return;
       }
 
       final best = candidates.first.text;
-      final normalizedBest = _normalize(best);
-      final normalizedTarget = _normalize(_targetWord);
+      final normRec = _normalize(best).replaceAll(' ', '');
+      final normTar = _normalize(_current.word);
+      final maxLen = normTar.isNotEmpty ? normTar.length : 1;
 
-      final isCorrect =
-          normalizedBest.contains(normalizedTarget) ||
-          normalizedTarget.contains(normalizedBest) ||
-          _levenshtein(normalizedBest, normalizedTarget) <= 1;
+      // Primary accuracy check (mirrors Python Levenshtein accuracy formula)
+      int dist = _levenshtein(normRec, normTar);
+      double accuracy = (maxLen - dist) / maxLen * 100;
+      bool dysgraphiaAlarm = false;
+
+      // If accuracy < 80%, try reversing the recognized text (mirrors the
+      // image-flip step in Python — detects reversed/mirrored writing)
+      if (accuracy < 80) {
+        final reversedRec = normRec.split('').reversed.join();
+        final distFlip = _levenshtein(reversedRec, normTar);
+        final accuracyFlip = (maxLen - distFlip) / maxLen * 100;
+        if (accuracyFlip > accuracy) {
+          accuracy = accuracyFlip;
+          dysgraphiaAlarm = true;
+        }
+      }
+
+      // Also catch exact reverse of target (e.g. wrote "قيرطب" instead of "بطريق")
+      final reversedTarget = normTar.split('').reversed.join();
+      if (!dysgraphiaAlarm && normRec == reversedTarget && normRec != normTar) {
+        dysgraphiaAlarm = true;
+      }
+
+      final isCorrect = accuracy >= 80.0;
 
       setState(() {
         _recognizedText = best;
@@ -180,44 +297,68 @@ class _Level7ScreenState extends State<Level7Screen> {
       if (isCorrect) {
         await Future.delayed(const Duration(milliseconds: 1500));
         if (!mounted) return;
-
-        if (_childId != 0) {
-          final duration = DateTime.now()
-              .difference(_exerciseStartedAt)
-              .inSeconds;
-          context.read<SubmissionCubit>().submit(
-            childId: _childId,
-            level: 'level7',
-            exerciseType: 'writing',
-            exerciseId: 1,
-            status: 'pass',
-            attemptsCount: _attemptsCount,
-            duration: duration,
-            totalItems: 1,
-            mistakes: List.from(_mistakes),
-            metadata: {'word': _targetWord},
-          );
-          await context.read<ChildCubit>().updateLevel(_childId, 'level7');
-        }
-
-        if (!mounted) return;
-        final navigator = Navigator.of(context);
-        Navigator.pushNamed(
-          context,
-          exercisesResultScreen,
-          arguments: () {
-            navigator.popUntil(ModalRoute.withName(childLevelsScreen));
-          },
-        );
+        await _onCorrect();
       } else {
         _attemptsCount++;
         _mistakes.add(best);
-        _showError('خطأ - كتبت: $best، المطلوب: $_targetWord');
+        if (dysgraphiaAlarm) {
+          _showError('الكتابة معكوسة! حاول تكتب من اليمين لليسار');
+        } else {
+          _showError('خطأ - كتبت: $best، المطلوب: ${_current.word}');
+        }
       }
     } catch (_) {
       setState(() => _isProcessing = false);
       _showError('حدث خطأ، حاول تاني');
     }
+  }
+
+  Future<void> _onCorrect() async {
+    final navigator = Navigator.of(context);
+    final childCubit = context.read<ChildCubit>();
+    final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+    final isLast = _wordIndex == _words.length - 1;
+
+    if (_childId != 0) {
+      context.read<SubmissionCubit>().submit(
+        childId: _childId,
+        level: 'level7',
+        exerciseType: 'writing',
+        exerciseId: _current.letterIndex + 1,
+        status: 'pass',
+        attemptsCount: _attemptsCount,
+        duration: duration,
+        totalItems: 1,
+        mistakes: List.from(_mistakes),
+        metadata: {'word': _current.word},
+      );
+
+      if (isLast) {
+        await childCubit.updateLevel(_childId, 'level7');
+      }
+    }
+
+    _attemptsCount = 0;
+    _mistakes.clear();
+    _exerciseStartedAt = DateTime.now();
+
+    if (!mounted) return;
+
+    Navigator.pushNamed(
+      context,
+      exercisesResultScreen,
+      arguments: () {
+        if (isLast) {
+          navigator.popUntil(ModalRoute.withName(childLevelsScreen));
+        } else {
+          navigator.pop();
+          if (mounted) {
+            _reset();
+            setState(() => _wordIndex++);
+          }
+        }
+      },
+    );
   }
 
   int _levenshtein(String a, String b) {
@@ -257,81 +398,86 @@ class _Level7ScreenState extends State<Level7Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ChildCubit, ChildState>(
-      builder: (context, childState) {
-        return LoadingOverlay(
-          isLoading: childState is ChildUpdateLoading,
-          child: Scaffold(
-            backgroundColor: AppColors.background,
-            body: !_isModelReady
-                ? _buildLoadingView()
-                : SafeArea(
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              Image.asset(
-                                'assets/images/level7/batrek.png',
-                                width: 200,
-                                height: 200,
-                                errorBuilder: (_, __, ___) => const Icon(
-                                  Icons.image_outlined,
-                                  size: 100,
-                                  color: Colors.grey,
+    return BlocListener<SubmissionCubit, SubmissionState>(
+      listener: (context, state) {
+        if (state is SubmissionsLoaded) _applyResume(state);
+      },
+      child: BlocBuilder<ChildCubit, ChildState>(
+        builder: (context, childState) {
+          return LoadingOverlay(
+            isLoading: childState is ChildUpdateLoading,
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              body: (!_isModelReady || (_childId != 0 && !_resumeApplied))
+                  ? _buildLoadingView()
+                  : SafeArea(
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Image.asset(
+                                  _current.imagePath,
+                                  width: 200,
+                                  height: 200,
+                                  errorBuilder: (ctx, e, _) => const Icon(
+                                    Icons.image_outlined,
+                                    size: 100,
+                                    color: Colors.grey,
+                                  ),
                                 ),
-                              ),
-                              const SizedBox(height: 20),
-                              SizedBox(
-                                height: 110,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    _buildWritingArea(),
-                                    const SizedBox(width: 16),
-                                    _isProcessing
-                                        ? const SizedBox(
-                                            width: 50,
-                                            height: 50,
-                                            child: CircularProgressIndicator(
-                                              color: AppColors.primary,
-                                              strokeWidth: 3,
+                                const SizedBox(height: 20),
+                                SizedBox(
+                                  height: 110,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      _buildWritingArea(),
+                                      const SizedBox(width: 16),
+                                      _isProcessing
+                                          ? const SizedBox(
+                                              width: 50,
+                                              height: 50,
+                                              child: CircularProgressIndicator(
+                                                color: AppColors.primary,
+                                                strokeWidth: 3,
+                                              ),
+                                            )
+                                          : ExercisesButton(
+                                              buttonIcon: _hasStrokes
+                                                  ? Icons.send_rounded
+                                                  : Icons.draw,
+                                              onPressed: (_hasStrokes &&
+                                                      _isCorrectMatch != true)
+                                                  ? _recognize
+                                                  : () {},
                                             ),
-                                          )
-                                        : ExercisesButton(
-                                            buttonIcon: _hasStrokes
-                                                ? Icons.send_rounded
-                                                : Icons.draw,
-                                            onPressed:
-                                                (_hasStrokes &&
-                                                    _isCorrectMatch != true)
-                                                ? _recognize
-                                                : () {},
-                                          ),
-                                  ],
+                                    ],
+                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_hasStrokes)
-                          Positioned(
-                            top: 20,
-                            left: 20,
-                            child: ExercisesButton(
-                              buttonIcon: Icons.refresh,
-                              onPressed: _reset,
+                              ],
                             ),
                           ),
-                      ],
+                          if (_hasStrokes)
+                            Positioned(
+                              top: 20,
+                              left: 20,
+                              child: ExercisesButton(
+                                buttonIcon: Icons.refresh,
+                                onPressed: _reset,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 
