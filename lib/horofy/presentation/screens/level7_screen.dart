@@ -258,17 +258,34 @@ class _Level7ScreenState extends State<Level7Screen> {
       }
 
       final best = candidates.first.text;
-      final normalizedBest = _normalize(best);
-      final normalizedTarget = _normalize(_current.word);
+      final normRec = _normalize(best).replaceAll(' ', '');
+      final normTar = _normalize(_current.word);
+      final maxLen = normTar.isNotEmpty ? normTar.length : 1;
 
-      // Strip spaces then check length before levenshtein
-      // to prevent a single letter being accepted as the full word
-      final stripped = normalizedBest.replaceAll(' ', '');
-      final minLen = (normalizedTarget.length * 0.6).ceil();
-      final tolerance = normalizedTarget.length <= 3 ? 1 : 2;
-      final isCorrect =
-          stripped.length >= minLen &&
-          _levenshtein(stripped, normalizedTarget) <= tolerance;
+      // Primary accuracy check (mirrors Python Levenshtein accuracy formula)
+      int dist = _levenshtein(normRec, normTar);
+      double accuracy = (maxLen - dist) / maxLen * 100;
+      bool dysgraphiaAlarm = false;
+
+      // If accuracy < 80%, try reversing the recognized text (mirrors the
+      // image-flip step in Python — detects reversed/mirrored writing)
+      if (accuracy < 80) {
+        final reversedRec = normRec.split('').reversed.join();
+        final distFlip = _levenshtein(reversedRec, normTar);
+        final accuracyFlip = (maxLen - distFlip) / maxLen * 100;
+        if (accuracyFlip > accuracy) {
+          accuracy = accuracyFlip;
+          dysgraphiaAlarm = true;
+        }
+      }
+
+      // Also catch exact reverse of target (e.g. wrote "قيرطب" instead of "بطريق")
+      final reversedTarget = normTar.split('').reversed.join();
+      if (!dysgraphiaAlarm && normRec == reversedTarget && normRec != normTar) {
+        dysgraphiaAlarm = true;
+      }
+
+      final isCorrect = accuracy >= 80.0;
 
       setState(() {
         _recognizedText = best;
@@ -284,7 +301,11 @@ class _Level7ScreenState extends State<Level7Screen> {
       } else {
         _attemptsCount++;
         _mistakes.add(best);
-        _showError('خطأ - كتبت: $best، المطلوب: ${_current.word}');
+        if (dysgraphiaAlarm) {
+          _showError('الكتابة معكوسة! حاول تكتب من اليمين لليسار');
+        } else {
+          _showError('خطأ - كتبت: $best، المطلوب: ${_current.word}');
+        }
       }
     } catch (_) {
       setState(() => _isProcessing = false);
