@@ -13,12 +13,31 @@ import 'package:horofy/core/style/app_colors.dart';
 import 'package:horofy/core/style/font_style.dart';
 import 'package:horofy/core/widgets/loading_overlay.dart';
 import 'package:horofy/core/widgets/loading_widget.dart';
+import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
+import 'package:horofy/horofy/data/models/letter_model.dart';
 import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_state.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
 
-enum _Level5Step { writeBa, writeBaDuck, writeBrOrange }
+class _Exercise {
+  final int letterIndex;
+  final String letter;
+  final String target;
+  final String? imagePath;
+  final String? suffix;
+  final bool isLastForLetter;
+
+  const _Exercise({
+    required this.letterIndex,
+    required this.letter,
+    required this.target,
+    this.imagePath,
+    this.suffix,
+    required this.isLastForLetter,
+  });
+}
 
 class Level5Screen extends StatefulWidget {
   const Level5Screen({super.key});
@@ -28,6 +47,45 @@ class Level5Screen extends StatefulWidget {
 }
 
 class _Level5ScreenState extends State<Level5Screen> {
+  // Build once from the shared data source — single source of truth
+  static final List<LetterModel> _letters =
+      LettersLocalDataSourceImpl().getLetters();
+
+  static final Map<String, LetterModel> _letterMap = {
+    for (final l in _letters) l.letter: l,
+  };
+
+  static final List<_Exercise> _exercises = _buildExercises();
+
+  static List<_Exercise> _buildExercises() {
+    final list = <_Exercise>[];
+    for (int i = 0; i < _letters.length; i++) {
+      final letter = _letters[i].letter;
+      if (letter == 'ب') {
+        list.add(_Exercise(
+          letterIndex: i, letter: letter, target: 'ب',
+          isLastForLetter: false,
+        ));
+        list.add(_Exercise(
+          letterIndex: i, letter: letter, target: 'ب',
+          imagePath: 'assets/images/level5/duck.png', suffix: 'طة',
+          isLastForLetter: false,
+        ));
+        list.add(_Exercise(
+          letterIndex: i, letter: letter, target: 'بر',
+          imagePath: 'assets/images/level5/orange.png', suffix: 'تقالة',
+          isLastForLetter: true,
+        ));
+      } else {
+        list.add(_Exercise(
+          letterIndex: i, letter: letter, target: letter,
+          isLastForLetter: true,
+        ));
+      }
+    }
+    return list;
+  }
+
   final DigitalInkRecognizer _recognizer = DigitalInkRecognizer(
     languageCode: 'ar',
   );
@@ -46,19 +104,15 @@ class _Level5ScreenState extends State<Level5Screen> {
   bool? _isCorrectMatch;
   int _childId = 0;
   bool _isModelReady = false;
+
+  int _exerciseIndex = 0;
   int _attemptsCount = 0;
   final List<String> _mistakes = [];
   DateTime _exerciseStartedAt = DateTime.now();
 
-  _Level5Step _step = _Level5Step.writeBa;
+  bool _resumeApplied = false;
 
-  static const _targets = {
-    _Level5Step.writeBa: 'ب',
-    _Level5Step.writeBaDuck: 'ب',
-    _Level5Step.writeBrOrange: 'بر',
-  };
-
-  String get _currentTarget => _targets[_step]!;
+  _Exercise get _current => _exercises[_exerciseIndex];
 
   @override
   void initState() {
@@ -69,16 +123,50 @@ class _Level5ScreenState extends State<Level5Screen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _childId =
+    final newChildId =
         (ModalRoute.of(context)?.settings.arguments as Map?)?['childId'] ?? 0;
+    if (newChildId != _childId) _childId = newChildId;
+    if (_childId != 0 && !_resumeApplied) {
+      context.read<SubmissionCubit>().loadChildSubmissions(_childId);
+    }
+  }
+
+  void _applyResume(SubmissionsLoaded state) {
+    if (_resumeApplied) return;
+    _resumeApplied = true;
+
+    final completed = state.completedExerciseIds(
+      'level5',
+      exerciseType: 'writing',
+    );
+    if (completed.isEmpty) return;
+
+    // exerciseId = letterIndex + 1 — find first letter not yet submitted
+    int firstIncomplete = -1;
+    for (int i = 0; i < _letters.length; i++) {
+      if (!completed.contains(i + 1)) {
+        firstIncomplete = i;
+        break;
+      }
+    }
+    if (firstIncomplete == -1) return;
+
+    final target = _exercises.indexWhere(
+      (e) => e.letterIndex == firstIncomplete,
+    );
+    if (target > 0) {
+      setState(() {
+        _exerciseIndex = target;
+        _attemptsCount = 0;
+        _mistakes.clear();
+        _exerciseStartedAt = DateTime.now();
+      });
+    }
   }
 
   Future<void> _downloadModelIfNeeded() async {
     final isDownloaded = await _modelManager.isModelDownloaded('ar');
-    if (!isDownloaded) {
-      await _modelManager.downloadModel('ar');
-    }
-
+    if (!isDownloaded) await _modelManager.downloadModel('ar');
     try {
       final dummyInk = ml_ink.Ink();
       dummyInk.strokes.add(
@@ -90,7 +178,6 @@ class _Level5ScreenState extends State<Level5Screen> {
       );
       await _recognizer.recognize(dummyInk);
     } catch (_) {}
-
     if (mounted) setState(() => _isModelReady = true);
   }
 
@@ -101,9 +188,13 @@ class _Level5ScreenState extends State<Level5Screen> {
     super.dispose();
   }
 
-  Future<void> _playBaSound() async {
+  Future<void> _playLetterSound() async {
+    final model = _letterMap[_current.letter];
+    if (model == null) return;
+    // soundName is stored as "assets/sounds/…" — strip the "assets/" prefix for AssetSource
+    final path = model.soundName.replaceFirst('assets/', '');
     await _player.stop();
-    await _player.play(AssetSource('sounds/letter_name/ba.mp3'));
+    await _player.play(AssetSource(path));
   }
 
   String _normalize(String text) {
@@ -174,7 +265,6 @@ class _Level5ScreenState extends State<Level5Screen> {
     if (_ink.strokes.isEmpty || _isProcessing || _isCorrectMatch == true) {
       return;
     }
-
     setState(() => _isProcessing = true);
 
     try {
@@ -182,7 +272,7 @@ class _Level5ScreenState extends State<Level5Screen> {
 
       if (candidates.isEmpty) {
         _attemptsCount++;
-        _mistakes.add(_currentTarget);
+        _mistakes.add(_current.target);
         _showError('لم يتم التعرف على الكتابة، حاول تاني');
         setState(() => _isProcessing = false);
         return;
@@ -190,7 +280,7 @@ class _Level5ScreenState extends State<Level5Screen> {
 
       final best = candidates.first.text;
       final normalizedBest = _normalize(best);
-      final normalizedTarget = _normalize(_currentTarget);
+      final normalizedTarget = _normalize(_current.target);
 
       final isCorrect = normalizedTarget.length <= 2
           ? normalizedBest.replaceAll(' ', '') == normalizedTarget
@@ -208,11 +298,11 @@ class _Level5ScreenState extends State<Level5Screen> {
       if (isCorrect) {
         await Future.delayed(const Duration(milliseconds: 1500));
         if (!mounted) return;
-        _navigateOnCorrect();
+        await _navigateOnCorrect();
       } else {
         _attemptsCount++;
         _mistakes.add(best);
-        _showError('خطأ - كتبت: $best، المطلوب: $_currentTarget');
+        _showError('خطأ - كتبت: $best، المطلوب: ${_current.target}');
       }
     } catch (_) {
       setState(() => _isProcessing = false);
@@ -220,64 +310,69 @@ class _Level5ScreenState extends State<Level5Screen> {
     }
   }
 
-  void _navigateOnCorrect() {
+  Future<void> _navigateOnCorrect() async {
     final navigator = Navigator.of(context);
     final childCubit = context.read<ChildCubit>();
+    final ex = _current;
+    final isLastExercise = _exerciseIndex == _exercises.length - 1;
 
-    switch (_step) {
-      case _Level5Step.writeBa:
-        Navigator.pushNamed(
-          context,
-          exercisesResultScreen,
-          arguments: () {
-            navigator.pop();
-            if (mounted) {
-              _reset();
-              setState(() => _step = _Level5Step.writeBaDuck);
-            }
-          },
+    if (ex.isLastForLetter) {
+      final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+
+      if (_childId != 0) {
+        // Fire and forget — same pattern as other levels
+        context.read<SubmissionCubit>().submit(
+          childId: _childId,
+          level: 'level5',
+          exerciseType: 'writing',
+          exerciseId: ex.letterIndex + 1,
+          status: 'pass',
+          attemptsCount: _attemptsCount,
+          duration: duration,
+          totalItems: 1,
+          mistakes: List.from(_mistakes),
+          metadata: {'letter': ex.letter},
         );
-        break;
-      case _Level5Step.writeBaDuck:
-        Navigator.pushNamed(
-          context,
-          exercisesResultScreen,
-          arguments: () {
-            navigator.pop();
-            if (mounted) {
-              _reset();
-              setState(() => _step = _Level5Step.writeBrOrange);
-            }
-          },
-        );
-        break;
-      case _Level5Step.writeBrOrange:
-        Navigator.pushNamed(
-          context,
-          exercisesResultScreen,
-          arguments: () async {
-            if (_childId != 0) {
-              final duration = DateTime.now()
-                  .difference(_exerciseStartedAt)
-                  .inSeconds;
-              context.read<SubmissionCubit>().submit(
-                childId: _childId,
-                level: 'level5',
-                exerciseType: 'writing',
-                exerciseId: 1,
-                status: 'pass',
-                attemptsCount: _attemptsCount,
-                duration: duration,
-                totalItems: _targets.length,
-                mistakes: List.from(_mistakes),
-                metadata: {'targets': _targets.values.toList()},
-              );
-              await childCubit.updateLevel(_childId, 'level6');
-            }
+
+        // Awaiting updateLevel triggers ChildUpdateLoading → LoadingOverlay
+        if (isLastExercise) {
+          await childCubit.updateLevel(_childId, 'level6');
+        }
+      }
+
+      _attemptsCount = 0;
+      _mistakes.clear();
+      _exerciseStartedAt = DateTime.now();
+
+      if (!mounted) return;
+
+      Navigator.pushNamed(
+        context,
+        exercisesResultScreen,
+        arguments: () {
+          if (isLastExercise) {
             navigator.popUntil(ModalRoute.withName(childLevelsScreen));
-          },
-        );
-        break;
+          } else {
+            navigator.pop();
+            if (mounted) {
+              _reset();
+              setState(() => _exerciseIndex++);
+            }
+          }
+        },
+      );
+    } else {
+      Navigator.pushNamed(
+        context,
+        exercisesResultScreen,
+        arguments: () {
+          navigator.pop();
+          if (mounted) {
+            _reset();
+            setState(() => _exerciseIndex++);
+          }
+        },
+      );
     }
   }
 
@@ -287,7 +382,10 @@ class _Level5ScreenState extends State<Level5Screen> {
     if (b.isEmpty) return a.length;
     final matrix = List.generate(
       a.length + 1,
-      (i) => List.generate(b.length + 1, (j) => j == 0 ? i : (i == 0 ? j : 0)),
+      (i) => List.generate(
+        b.length + 1,
+        (j) => j == 0 ? i : (i == 0 ? j : 0),
+      ),
     );
     for (int i = 1; i <= a.length; i++) {
       for (int j = 1; j <= b.length; j++) {
@@ -318,135 +416,142 @@ class _Level5ScreenState extends State<Level5Screen> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ChildCubit, ChildState>(
-      builder: (context, childState) {
-        return LoadingOverlay(
-          isLoading: childState is ChildUpdateLoading,
-          child: Scaffold(
-            backgroundColor: AppColors.background,
-            body: !_isModelReady
-                ? _buildLoadingView()
-                : SafeArea(
-                    child: Stack(
-                      children: [
-                        Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            children: [
-                              _step == _Level5Step.writeBa
-                                  ? Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.center,
-                                      children: [
-                                        Text(
-                                          _headerText(),
-                                          style: AppTextStyles.blackFont
-                                              .copyWith(fontSize: 35),
-                                        ),
-                                        const SizedBox(width: 16),
-                                        ExercisesButton(
-                                          onPressed: _playBaSound,
-                                          buttonIcon: Icons.headphones,
-                                        ),
-                                      ],
-                                    )
-                                  : const SizedBox(),
-                              SizedBox(
-                                height: _step == _Level5Step.writeBa ? 30 : 0,
-                              ),
-                              if (_step != _Level5Step.writeBa) ...[
-                                Image.asset(
-                                  _stepImagePath(),
-                                  height: 150,
-                                  fit: BoxFit.contain,
-                                  errorBuilder: (_, __, ___) => const Icon(
-                                    Icons.image_outlined,
-                                    size: 80,
-                                    color: Colors.grey,
+    final letterModel = _letterMap[_current.letter];
+
+    return BlocListener<SubmissionCubit, SubmissionState>(
+      listener: (context, state) {
+        if (state is SubmissionsLoaded) _applyResume(state);
+      },
+      child: BlocBuilder<ChildCubit, ChildState>(
+        builder: (context, childState) {
+          return LoadingOverlay(
+            isLoading: childState is ChildUpdateLoading,
+            child: Scaffold(
+              backgroundColor: AppColors.background,
+              body: (!_isModelReady || (_childId != 0 && !_resumeApplied))
+                  ? _buildLoadingView()
+                  : SafeArea(
+                      child: Stack(
+                        children: [
+                          Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                !_current.isImageStep
+                                    ? Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'اكتب حرف ال${letterModel?.letterAr ?? _current.letter}',
+                                            style: AppTextStyles.blackFont
+                                                .copyWith(fontSize: 35),
+                                          ),
+                                          const SizedBox(width: 16),
+                                          ExercisesButton(
+                                            onPressed: _playLetterSound,
+                                            buttonIcon: Icons.headphones,
+                                          ),
+                                        ],
+                                      )
+                                    : const SizedBox(),
+                                SizedBox(
+                                  height: !_current.isImageStep ? 30 : 0,
+                                ),
+                                if (_current.isImageStep) ...[
+                                  Image.asset(
+                                    _current.imagePath!,
+                                    height: 150,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (ctx, e, _) => const Icon(
+                                      Icons.image_outlined,
+                                      size: 80,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 20),
+                                ],
+                                SizedBox(
+                                  height: 110,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        textDirection: TextDirection.rtl,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          _buildWritingArea(),
+                                          if (_current.suffix != null)
+                                            Text(
+                                              _current.suffix!,
+                                              style: AppTextStyles.blackFont
+                                                  .copyWith(
+                                                    fontSize: 48,
+                                                    color: AppColors.primary,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                        ],
+                                      ),
+                                      const SizedBox(width: 16),
+                                      _isProcessing
+                                          ? const SizedBox(
+                                              width: 50,
+                                              height: 50,
+                                              child: CircularProgressIndicator(
+                                                color: AppColors.primary,
+                                                strokeWidth: 3,
+                                              ),
+                                            )
+                                          : ExercisesButton(
+                                              buttonIcon: _hasStrokes
+                                                  ? Icons.send_rounded
+                                                  : Icons.draw,
+                                              onPressed: (_hasStrokes &&
+                                                      _isCorrectMatch != true)
+                                                  ? _recognize
+                                                  : () {},
+                                            ),
+                                    ],
                                   ),
                                 ),
-                                const SizedBox(height: 20),
                               ],
-                              SizedBox(
-                                height: 110,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      textDirection: TextDirection.rtl,
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        _buildWritingArea(),
-                                        if (_step != _Level5Step.writeBa)
-                                          Text(
-                                            _stepSuffix(),
-                                            style: AppTextStyles.blackFont
-                                                .copyWith(
-                                                  fontSize: 48,
-                                                  color: AppColors.primary,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                          ),
-                                      ],
-                                    ),
-                                    const SizedBox(width: 16),
-                                    _isProcessing
-                                        ? const SizedBox(
-                                            width: 50,
-                                            height: 50,
-                                            child: CircularProgressIndicator(
-                                              color: AppColors.primary,
-                                              strokeWidth: 3,
-                                            ),
-                                          )
-                                        : ExercisesButton(
-                                            buttonIcon: _hasStrokes
-                                                ? Icons.send_rounded
-                                                : Icons.draw,
-                                            onPressed:
-                                                (_hasStrokes &&
-                                                    _isCorrectMatch != true)
-                                                ? _recognize
-                                                : () {},
-                                          ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        if (_hasStrokes)
-                          Positioned(
-                            top: 20,
-                            left: 20,
-                            child: ExercisesButton(
-                              buttonIcon: Icons.refresh,
-                              onPressed: _reset,
                             ),
                           ),
-                      ],
+                          if (_hasStrokes)
+                            Positioned(
+                              top: 20,
+                              left: 20,
+                              child: ExercisesButton(
+                                buttonIcon: Icons.refresh,
+                                onPressed: _reset,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
-                  ),
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 
   Widget _buildLoadingView() {
-    return Center(
+    return const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const LoadingWidget(),
-          const SizedBox(height: 20),
+          LoadingWidget(),
+          SizedBox(height: 20),
           Text(
             '...جاري التحضير',
-            style: const TextStyle(
+            style: TextStyle(
               fontFamily: 'Cairo-ExtraBold',
               fontSize: 16,
               color: AppColors.primary,
@@ -457,39 +562,8 @@ class _Level5ScreenState extends State<Level5Screen> {
     );
   }
 
-  String _headerText() {
-    switch (_step) {
-      case _Level5Step.writeBa:
-        return 'اكتب حرف الباء';
-      case _Level5Step.writeBaDuck:
-      case _Level5Step.writeBrOrange:
-        return '';
-    }
-  }
-
-  String _stepImagePath() {
-    switch (_step) {
-      case _Level5Step.writeBaDuck:
-        return 'assets/images/level5/duck.png';
-      case _Level5Step.writeBrOrange:
-        return 'assets/images/level5/orange.png';
-      case _Level5Step.writeBa:
-        return '';
-    }
-  }
-
-  String _stepSuffix() {
-    switch (_step) {
-      case _Level5Step.writeBaDuck:
-        return 'طه';
-      case _Level5Step.writeBrOrange:
-        return 'تقالة';
-      case _Level5Step.writeBa:
-        return '';
-    }
-  }
-
   Widget _buildWritingArea() {
+    final narrow = _current.suffix != null;
     return Builder(
       builder: (ctx) {
         return Listener(
@@ -506,7 +580,7 @@ class _Level5ScreenState extends State<Level5Screen> {
             if (box != null) _onPointerUp(e, box);
           },
           child: Container(
-            width: _step == _Level5Step.writeBa ? 280 : 130,
+            width: narrow ? 130 : 280,
             height: 90,
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.6),
@@ -534,6 +608,10 @@ class _Level5ScreenState extends State<Level5Screen> {
       },
     );
   }
+}
+
+extension on _Exercise {
+  bool get isImageStep => imagePath != null;
 }
 
 class _WritingPainter extends CustomPainter {
