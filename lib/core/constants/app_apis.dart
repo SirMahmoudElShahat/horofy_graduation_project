@@ -1,6 +1,6 @@
 class AppApis {
   // Base URL
-  static const String baseUrl = 'https://deslexia-desgraphia-production-1e86.up.railway.app';
+  static const String baseUrl = 'https://deslexia-desgraphia-production-6886.up.railway.app';
 
   // ==========================================
   // Authentication
