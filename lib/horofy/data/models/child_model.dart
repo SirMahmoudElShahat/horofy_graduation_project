@@ -11,43 +11,25 @@ class ChildModel extends ChildEntity {
     super.level,
   });
 
+  // Strips ISO time part: "2016-01-28T00:00:00.000Z" → "2016-01-28"
   static String _normalizeBirthDate(dynamic rawBirthDate) {
     final value = rawBirthDate?.toString().trim() ?? '';
     if (value.isEmpty) return '';
-    return value.split(' ').first;
+    return value.split(RegExp(r'[T ]')).first;
   }
 
+  // Converts any stored date to MM/DD/YYYY for API requests
   static String _birthDateForRequest(String rawBirthDate) {
-    final normalized = _normalizeBirthDate(rawBirthDate);
-    if (normalized.isEmpty) return '';
+    final value = rawBirthDate.trim();
+    if (value.isEmpty) return '';
 
-    final slashParts = normalized.split('/');
-    if (slashParts.length == 3) {
-      final day = int.tryParse(slashParts[0]);
-      final month = int.tryParse(slashParts[1]);
-      final year = int.tryParse(slashParts[2]);
-      if (day != null && month != null && year != null) {
-        final dd = day.toString().padLeft(2, '0');
-        final mm = month.toString().padLeft(2, '0');
-        final yyyy = year.toString().padLeft(4, '0');
-        return '$dd/$mm/$yyyy';
-      }
+    final dt = DateTime.tryParse(value);
+    if (dt != null) {
+      return '${dt.month.toString().padLeft(2, '0')}/${dt.day.toString().padLeft(2, '0')}/${dt.year}';
     }
 
-    final dashParts = normalized.split('-');
-    if (dashParts.length == 3) {
-      final year = int.tryParse(dashParts[0]);
-      final month = int.tryParse(dashParts[1]);
-      final day = int.tryParse(dashParts[2]);
-      if (day != null && month != null && year != null) {
-        final dd = day.toString().padLeft(2, '0');
-        final mm = month.toString().padLeft(2, '0');
-        final yyyy = year.toString().padLeft(4, '0');
-        return '$dd/$mm/$yyyy';
-      }
-    }
-
-    return normalized;
+    // Already MM/DD/YYYY (from add screen) — return as-is
+    return value;
   }
 
   Map<String, dynamic> toMap() {

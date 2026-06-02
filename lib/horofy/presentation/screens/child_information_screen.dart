@@ -40,6 +40,9 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
     final value = rawDate.trim();
     if (value.isEmpty) return null;
 
+    final iso = DateTime.tryParse(value);
+    if (iso != null) return iso;
+
     final normalized = value.split(' ').first;
 
     final slashParts = normalized.split('/');
@@ -47,16 +50,6 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
       final day = int.tryParse(slashParts[0]);
       final month = int.tryParse(slashParts[1]);
       final year = int.tryParse(slashParts[2]);
-      if (day != null && month != null && year != null) {
-        return DateTime(year, month, day);
-      }
-    }
-
-    final dashParts = normalized.split('-');
-    if (dashParts.length == 3) {
-      final year = int.tryParse(dashParts[0]);
-      final month = int.tryParse(dashParts[1]);
-      final day = int.tryParse(dashParts[2]);
       if (day != null && month != null && year != null) {
         return DateTime(year, month, day);
       }
@@ -328,7 +321,7 @@ class _ChildInformationScreenState extends State<ChildInformationScreen> {
           id: editingChild?.id,
           remoteId: editingChild?.remoteId,
           name: name,
-          birthDate: dateController.text,
+          birthDate: "${selectedDate!.month.toString().padLeft(2, '0')}/${selectedDate!.day.toString().padLeft(2, '0')}/${selectedDate!.year}",
           gender: selectedGender,
           avatar: _images[selectedAvatar],
           level: editingChild?.level ?? 'level1',

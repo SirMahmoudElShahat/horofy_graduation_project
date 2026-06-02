@@ -188,7 +188,7 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Text(
-                      child.birthDate,
+                      _formatBirthDate(child.birthDate),
                       style: AppTextStyles.greyFont.copyWith(fontSize: 14),
                     ),
                     const SizedBox(width: 5),
@@ -214,6 +214,15 @@ class _ChildsListScreenState extends State<ChildsListScreen> {
         ],
       ),
     );
+  }
+
+  String _formatBirthDate(String raw) {
+    try {
+      final dt = DateTime.parse(raw);
+      return "${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}";
+    } catch (_) {
+      return raw;
+    }
   }
 
   void _confirmDelete(ChildEntity child) {
