@@ -36,6 +36,7 @@ import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await CacheHelper.init();
+
   runApp(
     MultiBlocProvider(
       providers: [
@@ -91,11 +92,13 @@ void main() async {
             final repository = SubmissionRepositoryImpl(dataSource);
             return SubmissionCubit(
               submitExerciseUseCase: SubmitExerciseUseCase(repository),
-              getChildSubmissionsUseCase: GetChildSubmissionsUseCase(repository),
+              getChildSubmissionsUseCase: GetChildSubmissionsUseCase(
+                repository,
+              ),
             );
           },
         ),
-        
+
         /// Letters Feature
         BlocProvider(
           create: (context) {
@@ -109,7 +112,7 @@ void main() async {
           },
         ),
 
-       /// Level 2 — Mad Letters
+        /// Level 2 — Mad Letters
         BlocProvider(
           create: (context) {
             final dataSource = MadLettersDataSourceImpl();

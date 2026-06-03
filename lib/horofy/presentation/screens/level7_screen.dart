@@ -17,6 +17,7 @@ import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_state.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
+import 'package:horofy/core/services/ml_kit_model_service.dart';
 
 class _WordData {
   final int letterIndex;
@@ -39,34 +40,34 @@ class Level7Screen extends StatefulWidget {
 
 class _Level7ScreenState extends State<Level7Screen> {
   static const _wordTexts = [
-    'أرنب',   // ا
-    'برتقالة',  // ب
-    'تفاحة',  // ت
-    'ثلج',    // ث
-    'جزر',    // ج
-    'حذاء',   // ح
-    'خضار',   // خ
-    'دب',     // د
-    'ذرة',    // ذ
-    'رمان',   // ر
-    'زهرة',   // ز
-    'سمكة',   // س
-    'شمس',    // ش
-    'صندوق',  // ص
-    'ضرس',    // ض
-    'طماطم',  // ط
-    'ظرف',    // ظ
+    'أرنب', // ا
+    'برتقالة', // ب
+    'تفاحة', // ت
+    'ثلج', // ث
+    'جزر', // ج
+    'حذاء', // ح
+    'خضار', // خ
+    'دب', // د
+    'ذرة', // ذ
+    'رمان', // ر
+    'زهرة', // ز
+    'سمكة', // س
+    'شمس', // ش
+    'صندوق', // ص
+    'ضرس', // ض
+    'طماطم', // ط
+    'ظرف', // ظ
     'عصفورة', // ع
-    'غيوم',   // غ
-    'فجل',    // ف
-    'قلم',    // ق
-    'كتاب',   // ك
-    'لمون',   // ل
-    'منطاد',  // م
-    'نحلة',   // ن
-    'هرة',    // ه
-    'ورق',    // و
-    'يد',     // ي
+    'غيوم', // غ
+    'فجل', // ف
+    'قلم', // ق
+    'كتاب', // ك
+    'لمون', // ل
+    'منطاد', // م
+    'نحلة', // ن
+    'هرة', // ه
+    'ورق', // و
+    'يد', // ي
   ];
 
   static final List<_WordData> _words = _buildWords();
@@ -86,7 +87,6 @@ class _Level7ScreenState extends State<Level7Screen> {
   final DigitalInkRecognizer _recognizer = DigitalInkRecognizer(
     languageCode: 'ar',
   );
-  final ModelManager _modelManager = DigitalInkRecognizerModelManager();
 
   final ml_ink.Ink _ink = ml_ink.Ink();
   List<StrokePoint> _currentStroke = [];
@@ -113,7 +113,15 @@ class _Level7ScreenState extends State<Level7Screen> {
   @override
   void initState() {
     super.initState();
-    _downloadModelIfNeeded();
+    // Model is already ready from app startup — just reflect that in state
+    if (MlKitModelService.instance.isReady) {
+      _isModelReady = true;
+    } else {
+      // Fallback: wait if somehow called before main() finished
+      MlKitModelService.instance.ensureReady('ar').then((_) {
+        if (mounted) setState(() => _isModelReady = true);
+      });
+    }
   }
 
   @override
@@ -153,23 +161,6 @@ class _Level7ScreenState extends State<Level7Screen> {
         _exerciseStartedAt = DateTime.now();
       });
     }
-  }
-
-  Future<void> _downloadModelIfNeeded() async {
-    final isDownloaded = await _modelManager.isModelDownloaded('ar');
-    if (!isDownloaded) await _modelManager.downloadModel('ar');
-    try {
-      final dummyInk = ml_ink.Ink();
-      dummyInk.strokes.add(
-        Stroke()
-          ..points.addAll([
-            StrokePoint(x: 0, y: 0, t: 0),
-            StrokePoint(x: 1, y: 1, t: 1),
-          ]),
-      );
-      await _recognizer.recognize(dummyInk);
-    } catch (_) {}
-    if (mounted) setState(() => _isModelReady = true);
   }
 
   @override
@@ -400,81 +391,99 @@ class _Level7ScreenState extends State<Level7Screen> {
   Widget build(BuildContext context) {
     return BlocListener<SubmissionCubit, SubmissionState>(
       listener: (context, state) {
-        if (state is SubmissionsLoaded) _applyResume(state);
+        if (state is SubmissionsLoaded) {
+          _applyResume(state);
+        } else if (state is SubmissionLoading) {
+          // Even if loading, mark resume as pending so UI doesn't hang
+          // Resume will complete when SubmissionsLoaded arrives
+        }
       },
-      child: BlocBuilder<ChildCubit, ChildState>(
-        builder: (context, childState) {
-          return LoadingOverlay(
-            isLoading: childState is ChildUpdateLoading,
-            child: Scaffold(
-              backgroundColor: AppColors.background,
-              body: (!_isModelReady || (_childId != 0 && !_resumeApplied))
-                  ? _buildLoadingView()
-                  : SafeArea(
-                      child: Stack(
-                        children: [
-                          Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                Image.asset(
-                                  _current.imagePath,
-                                  width: 200,
-                                  height: 200,
-                                  errorBuilder: (ctx, e, _) => const Icon(
-                                    Icons.image_outlined,
-                                    size: 100,
-                                    color: Colors.grey,
-                                  ),
+      child: BlocBuilder<SubmissionCubit, SubmissionState>(
+        builder: (context, submissionState) {
+          return BlocBuilder<ChildCubit, ChildState>(
+            builder: (context, childState) {
+              return LoadingOverlay(
+                isLoading: childState is ChildUpdateLoading,
+                child: Scaffold(
+                  backgroundColor: AppColors.background,
+                  body:
+                      (!_isModelReady ||
+                          (_childId != 0 &&
+                              !_resumeApplied &&
+                              submissionState is! SubmissionsLoaded))
+                      ? _buildLoadingView()
+                      : SafeArea(
+                          child: Stack(
+                            children: [
+                              Center(
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      _current.imagePath,
+                                      width: 200,
+                                      height: 200,
+                                      errorBuilder: (ctx, e, _) => const Icon(
+                                        Icons.image_outlined,
+                                        size: 100,
+                                        color: Colors.grey,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    SizedBox(
+                                      height: 110,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.center,
+                                        children: [
+                                          _buildWritingArea(),
+                                          const SizedBox(width: 16),
+                                          _isProcessing
+                                              ? const SizedBox(
+                                                  width: 50,
+                                                  height: 50,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        color:
+                                                            AppColors.primary,
+                                                        strokeWidth: 3,
+                                                      ),
+                                                )
+                                              : ExercisesButton(
+                                                  buttonIcon: _hasStrokes
+                                                      ? Icons.send_rounded
+                                                      : Icons.draw,
+                                                  onPressed:
+                                                      (_hasStrokes &&
+                                                          _isCorrectMatch !=
+                                                              true)
+                                                      ? _recognize
+                                                      : () {},
+                                                ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 20),
-                                SizedBox(
-                                  height: 110,
-                                  child: Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      _buildWritingArea(),
-                                      const SizedBox(width: 16),
-                                      _isProcessing
-                                          ? const SizedBox(
-                                              width: 50,
-                                              height: 50,
-                                              child: CircularProgressIndicator(
-                                                color: AppColors.primary,
-                                                strokeWidth: 3,
-                                              ),
-                                            )
-                                          : ExercisesButton(
-                                              buttonIcon: _hasStrokes
-                                                  ? Icons.send_rounded
-                                                  : Icons.draw,
-                                              onPressed: (_hasStrokes &&
-                                                      _isCorrectMatch != true)
-                                                  ? _recognize
-                                                  : () {},
-                                            ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          if (_hasStrokes)
-                            Positioned(
-                              top: 20,
-                              left: 20,
-                              child: ExercisesButton(
-                                buttonIcon: Icons.refresh,
-                                onPressed: _reset,
                               ),
-                            ),
-                        ],
-                      ),
-                    ),
-            ),
+                              if (_hasStrokes)
+                                Positioned(
+                                  top: 20,
+                                  left: 20,
+                                  child: ExercisesButton(
+                                    buttonIcon: Icons.refresh,
+                                    onPressed: _reset,
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                ),
+              );
+            },
           );
         },
       ),

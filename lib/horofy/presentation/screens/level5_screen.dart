@@ -20,6 +20,7 @@ import 'package:horofy/horofy/presentation/cubit/child_state.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 import 'package:horofy/horofy/presentation/cubit/submission_state.dart';
 import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
+import 'package:horofy/core/services/ml_kit_model_service.dart';
 
 class _Exercise {
   final int letterIndex;
@@ -48,8 +49,8 @@ class Level5Screen extends StatefulWidget {
 
 class _Level5ScreenState extends State<Level5Screen> {
   // Build once from the shared data source — single source of truth
-  static final List<LetterModel> _letters =
-      LettersLocalDataSourceImpl().getLetters();
+  static final List<LetterModel> _letters = LettersLocalDataSourceImpl()
+      .getLetters();
 
   static final Map<String, LetterModel> _letterMap = {
     for (final l in _letters) l.letter: l,
@@ -62,25 +63,43 @@ class _Level5ScreenState extends State<Level5Screen> {
     for (int i = 0; i < _letters.length; i++) {
       final letter = _letters[i].letter;
       if (letter == 'ب') {
-        list.add(_Exercise(
-          letterIndex: i, letter: letter, target: 'ب',
-          isLastForLetter: false,
-        ));
-        list.add(_Exercise(
-          letterIndex: i, letter: letter, target: 'ب',
-          imagePath: 'assets/images/level5/duck.png', suffix: 'طة',
-          isLastForLetter: false,
-        ));
-        list.add(_Exercise(
-          letterIndex: i, letter: letter, target: 'بر',
-          imagePath: 'assets/images/level5/orange.png', suffix: 'تقالة',
-          isLastForLetter: true,
-        ));
+        list.add(
+          _Exercise(
+            letterIndex: i,
+            letter: letter,
+            target: 'ب',
+            isLastForLetter: false,
+          ),
+        );
+        list.add(
+          _Exercise(
+            letterIndex: i,
+            letter: letter,
+            target: 'ب',
+            imagePath: 'assets/images/level5/duck.png',
+            suffix: 'طة',
+            isLastForLetter: false,
+          ),
+        );
+        list.add(
+          _Exercise(
+            letterIndex: i,
+            letter: letter,
+            target: 'بر',
+            imagePath: 'assets/images/level5/orange.png',
+            suffix: 'تقالة',
+            isLastForLetter: true,
+          ),
+        );
       } else {
-        list.add(_Exercise(
-          letterIndex: i, letter: letter, target: letter,
-          isLastForLetter: true,
-        ));
+        list.add(
+          _Exercise(
+            letterIndex: i,
+            letter: letter,
+            target: letter,
+            isLastForLetter: true,
+          ),
+        );
       }
     }
     return list;
@@ -89,7 +108,6 @@ class _Level5ScreenState extends State<Level5Screen> {
   final DigitalInkRecognizer _recognizer = DigitalInkRecognizer(
     languageCode: 'ar',
   );
-  final ModelManager _modelManager = DigitalInkRecognizerModelManager();
   final AudioPlayer _player = AudioPlayer();
 
   final ml_ink.Ink _ink = ml_ink.Ink();
@@ -117,7 +135,15 @@ class _Level5ScreenState extends State<Level5Screen> {
   @override
   void initState() {
     super.initState();
-    _downloadModelIfNeeded();
+    // Model is already ready from app startup — just reflect that in state
+    if (MlKitModelService.instance.isReady) {
+      _isModelReady = true;
+    } else {
+      // Fallback: wait if somehow called before main() finished
+      MlKitModelService.instance.ensureReady('ar').then((_) {
+        if (mounted) setState(() => _isModelReady = true);
+      });
+    }
   }
 
   @override
@@ -162,23 +188,6 @@ class _Level5ScreenState extends State<Level5Screen> {
         _exerciseStartedAt = DateTime.now();
       });
     }
-  }
-
-  Future<void> _downloadModelIfNeeded() async {
-    final isDownloaded = await _modelManager.isModelDownloaded('ar');
-    if (!isDownloaded) await _modelManager.downloadModel('ar');
-    try {
-      final dummyInk = ml_ink.Ink();
-      dummyInk.strokes.add(
-        Stroke()
-          ..points.addAll([
-            StrokePoint(x: 0, y: 0, t: 0),
-            StrokePoint(x: 1, y: 1, t: 1),
-          ]),
-      );
-      await _recognizer.recognize(dummyInk);
-    } catch (_) {}
-    if (mounted) setState(() => _isModelReady = true);
   }
 
   @override
@@ -382,10 +391,7 @@ class _Level5ScreenState extends State<Level5Screen> {
     if (b.isEmpty) return a.length;
     final matrix = List.generate(
       a.length + 1,
-      (i) => List.generate(
-        b.length + 1,
-        (j) => j == 0 ? i : (i == 0 ? j : 0),
-      ),
+      (i) => List.generate(b.length + 1, (j) => j == 0 ? i : (i == 0 ? j : 0)),
     );
     for (int i = 1; i <= a.length; i++) {
       for (int j = 1; j <= b.length; j++) {
@@ -420,15 +426,25 @@ class _Level5ScreenState extends State<Level5Screen> {
 
     return BlocListener<SubmissionCubit, SubmissionState>(
       listener: (context, state) {
-        if (state is SubmissionsLoaded) _applyResume(state);
+        if (state is SubmissionsLoaded) {
+          _applyResume(state);
+        } else if (state is SubmissionLoading) {
+          // Even if loading, mark resume as pending so UI doesn't hang
+          // Resume will complete when SubmissionsLoaded arrives
+        }
       },
-      child: BlocBuilder<ChildCubit, ChildState>(
-        builder: (context, childState) {
-          return LoadingOverlay(
-            isLoading: childState is ChildUpdateLoading,
-            child: Scaffold(
-              backgroundColor: AppColors.background,
-              body: (!_isModelReady || (_childId != 0 && !_resumeApplied))
+      child: BlocBuilder<SubmissionCubit, SubmissionState>(
+        builder: (context, submissionState) {
+          return BlocBuilder<ChildCubit, ChildState>(
+            builder: (context, childState) {
+              return LoadingOverlay(
+                isLoading: childState is ChildUpdateLoading,
+                child: Scaffold(
+                  backgroundColor: AppColors.background,
+                  body: (!_isModelReady ||
+                          (_childId != 0 &&
+                              !_resumeApplied &&
+                              submissionState is! SubmissionsLoaded))
                   ? _buildLoadingView()
                   : SafeArea(
                       child: Stack(
@@ -512,7 +528,8 @@ class _Level5ScreenState extends State<Level5Screen> {
                                               buttonIcon: _hasStrokes
                                                   ? Icons.send_rounded
                                                   : Icons.draw,
-                                              onPressed: (_hasStrokes &&
+                                              onPressed:
+                                                  (_hasStrokes &&
                                                       _isCorrectMatch != true)
                                                   ? _recognize
                                                   : () {},
@@ -537,6 +554,8 @@ class _Level5ScreenState extends State<Level5Screen> {
                     ),
             ),
           );
+        },
+      );
         },
       ),
     );
