@@ -432,7 +432,7 @@ class _ConversationsListScreenState extends State<ConversationsListScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'مافيش محادثات لحد دلوقتى',
+            'لا يوجد محادثات حتى الان',
             style: AppTextStyles.blackFont.copyWith(
               fontSize: 18,
               color: Colors.black54,

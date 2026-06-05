@@ -257,16 +257,19 @@ class _Level7ScreenState extends State<Level7Screen> {
       int dist = _levenshtein(normRec, normTar);
       double accuracy = (maxLen - dist) / maxLen * 100;
       bool dysgraphiaAlarm = false;
+      bool usedFlipped = false;
 
-      // If accuracy < 80%, try reversing the recognized text (mirrors the
-      // image-flip step in Python — detects reversed/mirrored writing)
       if (accuracy < 80) {
-        final reversedRec = normRec.split('').reversed.join();
-        final distFlip = _levenshtein(reversedRec, normTar);
-        final accuracyFlip = (maxLen - distFlip) / maxLen * 100;
-        if (accuracyFlip > accuracy) {
-          accuracy = accuracyFlip;
-          dysgraphiaAlarm = true;
+        final flippedText = await _recognizeFlipped();
+        if (flippedText != null) {
+          final normFlipped = _normalize(flippedText).replaceAll(' ', '');
+          final distFlip = _levenshtein(normFlipped, normTar);
+          final accuracyFlip = (maxLen - distFlip) / maxLen * 100;
+          if (accuracyFlip > accuracy) {
+            accuracy = accuracyFlip;
+            dysgraphiaAlarm = true;
+            usedFlipped = true;
+          }
         }
       }
 
@@ -279,7 +282,9 @@ class _Level7ScreenState extends State<Level7Screen> {
       final isCorrect = accuracy >= 80.0;
 
       setState(() {
-        _recognizedText = best;
+        _recognizedText = isCorrect && dysgraphiaAlarm && usedFlipped
+            ? _current.word
+            : best;
         _showResult = true;
         _isProcessing = false;
         _isCorrectMatch = isCorrect;
@@ -301,6 +306,39 @@ class _Level7ScreenState extends State<Level7Screen> {
     } catch (_) {
       setState(() => _isProcessing = false);
       _showError('حدث خطأ، حاول تاني');
+    }
+  }
+
+  /// Mirrors all ink strokes horizontally and runs recognition on the result.
+  /// Returns the top candidate text, or null if recognition fails.
+  Future<String?> _recognizeFlipped() async {
+    if (_ink.strokes.isEmpty) return null;
+
+    double maxX = 0;
+    for (final stroke in _ink.strokes) {
+      for (final point in stroke.points) {
+        if (point.x > maxX) {
+          maxX = point.x;
+        }
+      }
+    }
+
+    final flippedInk = ml_ink.Ink();
+    for (final stroke in _ink.strokes) {
+      final flippedStroke = Stroke();
+      for (final point in stroke.points) {
+        flippedStroke.points.add(
+          StrokePoint(x: maxX - point.x, y: point.y, t: point.t),
+        );
+      }
+      flippedInk.strokes.add(flippedStroke);
+    }
+
+    try {
+      final candidates = await _recognizer.recognize(flippedInk);
+      return candidates.isNotEmpty ? candidates.first.text : null;
+    } catch (_) {
+      return null;
     }
   }
 

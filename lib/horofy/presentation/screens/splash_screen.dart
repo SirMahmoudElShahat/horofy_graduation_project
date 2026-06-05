@@ -19,7 +19,7 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   double _progress = 0.1;
-  String _status = 'جاري تجهيز التطبيق...';
+  String _status = '...جاري تجهيز التطبيق';
   String? _errorMessage;
 
   @override
@@ -34,7 +34,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     setState(() {
       _progress = 0.1;
-      _status = 'جاري إعداد التطبيق...';
+      _status = '...جاري إعداد التطبيق';
       _errorMessage = null;
     });
 
@@ -44,8 +44,8 @@ class _SplashScreenState extends State<SplashScreen> {
       if (!mounted) return;
       setState(() {
         _progress = 0.0;
-        _status = 'فشل تحميل النموذج.';
-        _errorMessage = 'الرجاء التحقق من اتصال الإنترنت ثم حاول مرة أخرى.';
+        _status = '.فشل تحميل النموذج';
+        _errorMessage = '.الرجاء التحقق من اتصال الإنترنت ثم حاول مرة أخرى';
       });
       return;
     }
@@ -54,7 +54,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     setState(() {
       _progress = 1.0;
-      _status = 'التطبيق جاهز. جاري الانتقال...';
+      _status = '...التطبيق جاهز. جاري الانتقال';
     });
 
     await Future.delayed(const Duration(seconds: 1));
