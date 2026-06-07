@@ -1,122 +1,153 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:horofy/app_router.dart';
+import 'package:horofy/core/cache/cache_helper.dart';
+import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/style/app_colors.dart';
+import 'package:horofy/horofy/data/datasources/auth_remote_datasource.dart';
+import 'package:horofy/horofy/data/datasources/chat_remote_datasource.dart';
+import 'package:horofy/horofy/data/datasources/child_remote_datasource.dart';
+import 'package:horofy/horofy/data/datasources/letters_local_data_source.dart';
+import 'package:horofy/horofy/data/datasources/local_data_source.dart';
+import 'package:horofy/horofy/data/datasources/submission_remote_datasource.dart';
+import 'package:horofy/horofy/data/repositories/auth_repository_impl.dart';
+import 'package:horofy/horofy/data/repositories/child_repository_impl.dart';
+import 'package:horofy/horofy/data/repositories/letters_repository_impl.dart';
+import 'package:horofy/horofy/data/repositories/onboarding_repository_impl.dart';
+import 'package:horofy/horofy/data/repositories/submission_repository_impl.dart';
+import 'package:horofy/horofy/domain/usecases/add_child_usecase.dart';
+import 'package:horofy/horofy/domain/usecases/auth_usecases.dart';
+import 'package:horofy/horofy/domain/usecases/letters_usecase.dart';
+import 'package:horofy/horofy/domain/usecases/submission_usecases.dart';
+import 'package:horofy/horofy/presentation/cubit/auth_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/chat_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/letters_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/onboarding_cubit.dart';
+import 'package:horofy/horofy/data/datasources/mad_letters_datasource.dart';
+import 'package:horofy/horofy/data/repositories/mad_letters_repository_impl.dart';
+import 'package:horofy/horofy/domain/usecases/mad_letters_usecase.dart';
+import 'package:horofy/horofy/presentation/cubit/level2_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
 
-void main() {
-  runApp(const MyApp());
-}
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await CacheHelper.init();
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
+  runApp(
+    MultiBlocProvider(
+      providers: [
+        /// onboarding
+        BlocProvider(
+          create: (context) =>
+              OnboardingCubit(OnboardingRepositoryImpl(LocalDataSourceImpl())),
         ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
+
+        /// Auth
+        BlocProvider(
+          create: (context) {
+            final dataSource = AuthRemoteDataSourceImpl(dio: Dio());
+            final repository = AuthRepositoryImpl(dataSource);
+            return AuthCubit(
+              loginUseCase: LoginUseCase(repository),
+              registerUseCase: RegisterUseCase(repository),
+              forgotPasswordUseCase: ForgotPasswordUseCase(repository),
+              verifyOtpUseCase: VerifyOtpUseCase(repository),
+              resetPasswordUseCase: ResetPasswordUseCase(repository),
+            );
+          },
+        ),
+
+        /// chat
+        BlocProvider(
+          create: (context) =>
+              ChatCubit(dataSource: ChatRemoteDataSourceImpl(dio: Dio())),
+        ),
+
+        /// children
+        BlocProvider(
+          create: (context) {
+            final remoteDataSource = ChildRemoteDataSourceImpl(dio: Dio());
+
+            final repository = ChildRepositoryImpl(
+              remoteDataSource: remoteDataSource,
+            );
+
+            return ChildCubit(
+              addChild: AddChildUseCase(repository),
+              getChildrenUseCase: GetChildrenUseCase(repository),
+              deleteChildUseCase: DeleteChildUseCase(repository),
+              updateChildUseCase: UpdateChildUseCase(repository),
+            );
+          },
+        ),
+
+        /// Submissions — replaces ProgressCubit
+        BlocProvider(
+          create: (context) {
+            final dataSource = SubmissionRemoteDataSourceImpl(dio: Dio());
+            final repository = SubmissionRepositoryImpl(dataSource);
+            return SubmissionCubit(
+              submitExerciseUseCase: SubmitExerciseUseCase(repository),
+              getChildSubmissionsUseCase: GetChildSubmissionsUseCase(
+                repository,
+              ),
+            );
+          },
+        ),
+
+        /// Letters Feature
+        BlocProvider(
+          create: (context) {
+            final dataSource = LettersLocalDataSourceImpl();
+
+            final repository = LettersRepositoryImpl(dataSource);
+
+            final getLetters = GetLettersUseCase(repository);
+
+            return LettersCubit(getLetters)..loadLetters();
+          },
+        ),
+
+        /// Level 2 — Mad Letters
+        BlocProvider(
+          create: (context) {
+            final dataSource = MadLettersDataSourceImpl();
+            final repository = MadLettersRepositoryImpl(dataSource);
+            return Level2Cubit(
+              getMadLettersUseCase: GetMadLettersUseCase(repository),
+            )..loadMadLetters();
+          },
+        ),
+      ],
+      child: Horofy(appRouter: AppRouter()),
+    ),
+  );
+}
+
+class Horofy extends StatelessWidget {
+  const Horofy({super.key, required this.appRouter});
+
+  final AppRouter appRouter;
+
+  @override
+  Widget build(BuildContext context) {
+    precacheImage(const AssetImage('assets/images/splash.gif'), context);
+    return GetMaterialApp(
+      title: 'Horoofy حروفى',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primaryColor: AppColors.primary),
+      initialRoute: splashScreen,
+      onGenerateRoute: appRouter.generateRoute,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('en'), Locale('ar')],
     );
   }
 }

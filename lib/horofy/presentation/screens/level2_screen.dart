@@ -1,0 +1,679 @@
+import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_tts/flutter_tts.dart';
+import 'package:horofy/core/constants/strings.dart';
+import 'package:horofy/core/style/app_colors.dart';
+import 'package:horofy/core/style/font_style.dart';
+import 'package:horofy/core/widgets/loading_overlay.dart';
+import 'package:horofy/horofy/domain/entities/mad_letter.dart';
+import 'package:horofy/horofy/presentation/cubit/child_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/child_state.dart';
+import 'package:horofy/horofy/presentation/cubit/level2_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/level2_state.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_cubit.dart';
+import 'package:horofy/horofy/presentation/cubit/submission_state.dart';
+import 'package:horofy/horofy/presentation/widgets/exercises_button.dart';
+import 'package:speech_to_text/speech_recognition_result.dart';
+import 'package:speech_to_text/speech_to_text.dart';
+
+class Level2Screen extends StatefulWidget {
+  const Level2Screen({super.key});
+
+  @override
+  State<Level2Screen> createState() => _Level2ScreenState();
+}
+
+class _Level2ScreenState extends State<Level2Screen> {
+  final AudioPlayer _player = AudioPlayer();
+  final FlutterTts _tts = FlutterTts();
+  final SpeechToText _stt = SpeechToText();
+
+  bool _speechEnabled = false;
+  int _childId = 0;
+
+  // Per-exercise attempt tracking
+  int _attemptsCount = 0;
+  final List<String> _currentMistakes = [];
+  DateTime _exerciseStartedAt = DateTime.now();
+
+  // Ensure resume runs once
+  bool _resumeApplied = false;
+
+  // Cache submissions until Level2Cubit is also ready (race condition fix)
+  SubmissionsLoaded? _pendingResume;
+
+  String _normalizeArabic(String text) {
+    return text
+        .replaceAll('أ', 'ا')
+        .replaceAll('إ', 'ا')
+        .replaceAll('آ', 'ا')
+        .replaceAll('ى', 'ي')
+        .replaceAll('ة', 'ه')
+        .replaceAll('ك', 'ق')
+        .replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '')
+        .trim()
+        .toLowerCase();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _initTts();
+    _initStt();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _childId =
+        (ModalRoute.of(context)?.settings.arguments as Map?)?['childId'] ?? 0;
+
+    if (_childId != 0 && !_resumeApplied) {
+      context.read<SubmissionCubit>().loadChildSubmissions(_childId);
+    }
+  }
+
+  // ── Resume: jump to first mad letter not yet passed ───────────────────────
+  // exerciseId for level2: 1=ألف, 2=واو, 3=ياء (matches MadLetter.id)
+  //
+  // Called from TWO listeners to handle the race between SubmissionCubit
+  // and Level2Cubit — whichever arrives last will trigger the actual jump.
+  void _applyResume({SubmissionsLoaded? submissionsState}) {
+    if (_resumeApplied) return;
+
+    // Cache if new submissions arrived
+    if (submissionsState != null) _pendingResume = submissionsState;
+
+    // Need both cubits ready
+    final pending = _pendingResume;
+    if (pending == null) return;
+
+    final level2State = context.read<Level2Cubit>().state;
+    if (level2State is! Level2Loaded) return;
+
+    // Both ready — mark done and apply
+    _resumeApplied = true;
+
+    final completed = pending.completedExerciseIds('level2');
+    if (completed.isEmpty) return;
+
+    final nextIndex = level2State.madLetters.indexWhere(
+      (l) => !completed.contains(l.id),
+    );
+
+    // nextIndex == -1 means all letters done — stay on last
+    if (nextIndex != -1 && nextIndex != level2State.currentIndex) {
+      context.read<Level2Cubit>().jumpToIndex(nextIndex);
+    }
+  }
+
+  Future<void> _initTts() async {
+    await _tts.setLanguage('ar-SA');
+    await _tts.setSpeechRate(0.4);
+    await _tts.setPitch(1.0);
+  }
+
+  Future<void> _initStt() async {
+    _speechEnabled = await _stt.initialize(
+      onError: (_) => setState(() {}),
+      onStatus: (s) {
+        if (s == 'notListening') setState(() {});
+      },
+    );
+    setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _player.dispose();
+    _tts.stop();
+    _stt.stop();
+    super.dispose();
+  }
+
+  Future<void> _playAsset(String path) async {
+    final p = path.startsWith('assets/') ? path.substring(7) : path;
+    await _player.stop();
+    await _player.play(AssetSource(p));
+  }
+
+  Future<void> _speakWord(String word) async {
+    await _tts.stop();
+    await _tts.speak(word);
+  }
+
+  Future<void> _startListening(MadLetter letter) async {
+    if (_stt.isListening) return;
+
+    context.read<Level2Cubit>().onSpeechResult(
+      isCorrect: false,
+      spokenText: '',
+    );
+    context.read<Level2Cubit>().setListening(true);
+
+    await _stt.listen(
+      onResult: (r) => _onResult(r, letter),
+      listenFor: const Duration(seconds: 20),
+      pauseFor: const Duration(seconds: 4),
+      localeId: 'ar-SA',
+      listenMode: ListenMode.dictation,
+    );
+  }
+
+  Future<void> _stopListening() async {
+    await _stt.stop();
+    context.read<Level2Cubit>().setListening(false);
+  }
+
+  void _onResult(SpeechRecognitionResult result, MadLetter letter) {
+    String spoken = _normalizeArabic(
+      result.recognizedWords,
+    ).replaceAll('حرف', '').replaceAll('الحرف', '').trim();
+    if (spoken.isEmpty) return;
+
+    final currentStep =
+        (context.read<Level2Cubit>().state as Level2Loaded).step;
+
+    bool isCorrect;
+    if (currentStep == Level2Step.practiceSpelling) {
+      final madWordLetter = letter.wordLetters.firstWhere(
+        (wl) => wl.isMadLetter,
+      );
+      final correct = _normalizeArabic(madWordLetter.letter);
+      final letterAr = _normalizeArabic(letter.letterAr);
+      isCorrect = spoken.contains(correct) || spoken.contains(letterAr);
+    } else {
+      isCorrect = spoken.contains(_normalizeArabic(letter.wordText));
+    }
+
+    if (!isCorrect && result.finalResult) {
+      _attemptsCount++;
+      _currentMistakes.add(spoken);
+    }
+
+    context.read<Level2Cubit>().onSpeechResult(
+      isCorrect: isCorrect,
+      spokenText: spoken,
+    );
+
+    if (isCorrect) {
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) _speakWord(letter.wordText);
+      });
+    }
+  }
+
+  Future<void> _onNext(Level2Loaded state) async {
+    if (state.step == Level2Step.wordImage) {
+      final isLast = state.isLastLetter;
+      final letter = state.currentMadLetter!;
+      final duration = DateTime.now().difference(_exerciseStartedAt).inSeconds;
+
+      // Submit passing result with full data
+      if (_childId != 0) {
+        context.read<SubmissionCubit>().submit(
+          childId: _childId,
+          level: 'level2',
+          exerciseType: 'reading',
+          exerciseId: letter.id, // 1=ألف, 2=واو, 3=ياء
+          status: 'pass',
+          attemptsCount: _attemptsCount,
+          duration: duration,
+          totalItems: state.madLetters.length,
+          mistakes: List.from(_currentMistakes),
+          metadata: {'letterAr': letter.letterAr, 'word': letter.wordText},
+        );
+        _attemptsCount = 0;
+        _currentMistakes.clear();
+        _exerciseStartedAt = DateTime.now();
+      }
+
+      // Upgrade to level3 only after last mad letter
+      if (isLast && _childId != 0) {
+        await context.read<ChildCubit>().updateLevel(_childId, 'level3');
+      }
+
+      if (!mounted) return;
+      final navigator = Navigator.of(context);
+      Navigator.pushNamed(
+        context,
+        exercisesResultScreen,
+        arguments: () {
+          if (isLast) {
+            navigator.popUntil(ModalRoute.withName(childLevelsScreen));
+          } else {
+            context.read<Level2Cubit>().moveToNextLetter();
+            navigator.pop();
+          }
+        },
+      );
+      return;
+    }
+
+    if (state.step == Level2Step.wordSpelled) {
+      await _speakWord(state.currentMadLetter!.wordText);
+    }
+
+    context.read<Level2Cubit>().nextStep();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<SubmissionCubit, SubmissionState>(
+          listener: (context, state) {
+            if (state is SubmissionsLoaded) {
+              _applyResume(submissionsState: state);
+            }
+          },
+        ),
+        BlocListener<Level2Cubit, Level2State>(
+          listener: (context, state) {
+            if (state is Level2Loaded) {
+              _applyResume();
+            }
+          },
+        ),
+      ],
+      child: BlocBuilder<SubmissionCubit, SubmissionState>(
+        builder: (context, submissionState) {
+          return BlocBuilder<ChildCubit, ChildState>(
+            builder: (context, childState) {
+              final isLoading =
+                  submissionState is SubmissionLoading ||
+                  submissionState is SubmissionInitial ||
+                  childState is ChildUpdateLoading;
+
+              return BlocBuilder<Level2Cubit, Level2State>(
+                builder: (context, state) {
+                  if (state is! Level2Loaded ||
+                      state.currentMadLetter == null) {
+                    return const Scaffold(
+                      backgroundColor: Color(0xFFFAEFE4),
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+
+                  final letter = state.currentMadLetter!;
+
+                  return LoadingOverlay(
+                    isLoading: isLoading,
+                    child: Scaffold(
+                      backgroundColor: const Color(0xFFFAEFE4),
+                      body: SafeArea(
+                        child: Stack(
+                          children: [
+                            _buildStepContent(state, letter),
+                            _buildNextButton(state, letter),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildNextButton(Level2Loaded state, MadLetter letter) {
+    final hide =
+        (state.step == Level2Step.practiceSpelling && !state.isCorrect) ||
+        (state.step == Level2Step.practiceWord && !state.isCorrect);
+
+    return Positioned(
+      top: 20,
+      right: 20,
+      child: AnimatedOpacity(
+        opacity: hide ? 0 : 1,
+        duration: const Duration(milliseconds: 300),
+        child: IgnorePointer(
+          ignoring: hide,
+          child: ExercisesButton(
+            buttonIcon: Icons.arrow_forward_sharp,
+            onPressed: () => _onNext(state),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepContent(Level2Loaded state, MadLetter letter) {
+    switch (state.step) {
+      case Level2Step.letterImage:
+        return _buildLetterImage(letter);
+      case Level2Step.wordSpelled:
+        return _buildWordSpelled(letter);
+      case Level2Step.wordFull:
+        return _buildWordFull(state, letter);
+      case Level2Step.practiceSpelling:
+        return _buildPracticeSpelling(state, letter);
+      case Level2Step.practiceWord:
+        return _buildPracticeWord(state, letter);
+      case Level2Step.wordImage:
+        return _buildWordImage(letter);
+    }
+  }
+
+  Widget _buildLetterImage(MadLetter letter) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          Text(
+            letter.letterAr,
+            style: AppTextStyles.greyFont.copyWith(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 16),
+          Image.asset(letter.image, height: 250, fit: BoxFit.contain),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWordSpelled(MadLetter letter) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'الكلمة مفصلة',
+            style: AppTextStyles.greyFont.copyWith(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: letter.wordLetters.reversed
+                .map((wl) => _buildSpelledLetterCard(wl))
+                .toList(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSpelledLetterCard(WordLetter wl) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: wl.isMadLetter
+                  ? AppColors.primary.withOpacity(0.12)
+                  : Colors.white,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: wl.isMadLetter
+                    ? AppColors.primary
+                    : Colors.grey.shade300,
+                width: wl.isMadLetter ? 2 : 1,
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: Image.asset(wl.image, fit: BoxFit.contain),
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            wl.letter,
+            style: TextStyle(
+              fontFamily: 'Cairo-ExtraBold',
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: wl.isMadLetter ? AppColors.primary : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 6),
+          ExercisesButton(
+            buttonIcon: Icons.headphones_rounded,
+            onPressed: () => _playAsset(wl.sound),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWordFull(Level2Loaded state, MadLetter letter) {
+    String stripDiacritics(String s) =>
+        s.replaceAll(RegExp(r'[ًٌٍَُِّْـ]'), '');
+
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'الكلمة كاملة',
+            style: AppTextStyles.greyFont.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text.rich(
+            TextSpan(
+              children: letter.wordText.split('').map((char) {
+                final isMadLetter =
+                    stripDiacritics(char) == stripDiacritics(letter.letter);
+                return TextSpan(
+                  text: char,
+                  style: TextStyle(
+                    fontFamily: 'Cairo-ExtraBold',
+                    fontSize: 72,
+                    fontWeight: FontWeight.bold,
+                    color: isMadLetter
+                        ? Colors.orange
+                        : const Color(0xFF774019),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 32),
+          ExercisesButton(
+            buttonIcon: Icons.headphones_rounded,
+            onPressed: () => _speakWord(letter.wordText),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPracticeSpelling(Level2Loaded state, MadLetter letter) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'انطق حرف المد 🎤',
+            style: AppTextStyles.greyFont.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: letter.wordLetters.reversed.map((wl) {
+              return Container(
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 80,
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: wl.isMadLetter
+                            ? AppColors.primary.withOpacity(0.12)
+                            : Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(
+                          color: wl.isMadLetter
+                              ? AppColors.primary
+                              : Colors.grey.shade300,
+                          width: wl.isMadLetter ? 2 : 1,
+                        ),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: Image.asset(wl.image, fit: BoxFit.contain),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      wl.letter,
+                      style: TextStyle(
+                        fontFamily: 'Cairo-ExtraBold',
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: wl.isMadLetter
+                            ? AppColors.primary
+                            : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    if (wl.isMadLetter)
+                      _buildMicButton(state, letter)
+                    else
+                      const SizedBox(height: 50),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 24),
+          if (state.statusMessage.isNotEmpty)
+            _buildStatusMessage(state.statusMessage, state.isCorrect),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMicButton(Level2Loaded state, MadLetter letter) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (state.isListening)
+          const SizedBox(
+            width: 60,
+            height: 60,
+            child: CircularProgressIndicator(
+              color: AppColors.primary,
+              strokeWidth: 3,
+            ),
+          ),
+        ExercisesButton(
+          buttonIcon: state.isListening ? Icons.stop_rounded : Icons.mic,
+          onPressed: state.isListening
+              ? _stopListening
+              : (_speechEnabled ? () => _startListening(letter) : () {}),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPracticeWord(Level2Loaded state, MadLetter letter) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            'انطق الكلمة كاملة 🎤',
+            style: AppTextStyles.greyFont.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            letter.wordText,
+            style: const TextStyle(
+              fontFamily: 'Cairo-ExtraBold',
+              fontSize: 64,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF774019),
+            ),
+          ),
+          const SizedBox(height: 32),
+          _buildMicButton(state, letter),
+          const SizedBox(height: 24),
+          if (state.statusMessage.isNotEmpty)
+            _buildStatusMessage(state.statusMessage, state.isCorrect),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWordImage(MadLetter letter) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            letter.wordText,
+            style: const TextStyle(
+              fontFamily: 'Cairo-ExtraBold',
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF774019),
+            ),
+          ),
+          const SizedBox(height: 20),
+          Image.asset(
+            letter.wordImage,
+            height: 220,
+            fit: BoxFit.contain,
+            errorBuilder: (_, __, ___) => Container(
+              width: 220,
+              height: 220,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: const Center(
+                child: Icon(Icons.image_outlined, size: 80, color: Colors.grey),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusMessage(String message, bool isCorrect) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        color: isCorrect
+            ? Colors.green.withOpacity(0.1)
+            : Colors.red.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        message,
+        style: TextStyle(
+          fontFamily: 'Cairo-ExtraBold',
+          fontSize: 16,
+          color: isCorrect ? Colors.green : Colors.red,
+        ),
+      ),
+    );
+  }
+}
