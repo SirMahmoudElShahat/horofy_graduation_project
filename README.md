@@ -14,7 +14,6 @@ An interactive Arabic educational mobile app designed to help children with read
 
 🎬 **[Watch the Demo on Google Drive](https://drive.google.com/file/d/1ZN7VORUWNFPovxp8d1no6R_UiK_Oku1R/view?usp=drivesdk)**
 
-> **Tip:** To ensure the video stays available long-term, upload it to **GitHub Releases** as an asset and update the link above.
 
 ---
 
